@@ -140,9 +140,11 @@ install_sonarr() {
 
 install_jackett() {
     install_packages libicu-dev
-    wget https://github.com/Jackett/Jackett/releases/download/v0.20.3200/Jackett.Binaries.LinuxAMDx64.tar.gz
+    wget https://github.com/Jackett/Jackett/releases/latest/download/Jackett.Binaries.LinuxAMDx64.tar.gz
     tar -xvzf Jackett.Binaries.LinuxAMDx64.tar.gz
     sudo mv Jackett /opt/
+    sudo chown -R $USER:$USER /opt/Jackett
+    
     sudo tee /etc/systemd/system/jackett.service > /dev/null <<EOL
 [Unit]
 Description=Jackett Daemon
@@ -150,18 +152,26 @@ After=network.target
 
 [Service]
 User=$USER
+WorkingDirectory=/opt/Jackett
 ExecStart=/opt/Jackett/jackett --NoUpdates
 Restart=on-failure
+RestartSec=5
+TimeoutStopSec=30
 
 [Install]
 WantedBy=multi-user.target
 EOL
+
+    sudo systemctl daemon-reload
     sudo systemctl enable jackett
     sudo systemctl start jackett
+    
+    # Wait for Jackett to start
+    sleep 10
+    
     configure_nginx_for_app "jackett" "9117" "$DOMAIN"
     echo "Jackett installed. URL: http://jackett.$DOMAIN or http://$IP:9117"
 }
-
 install_ombi() {
     install_packages libicu66 libssl1.1
     wget https://github.com/Ombi-app/Ombi/releases/latest/download/linux-x64.tar.gz
