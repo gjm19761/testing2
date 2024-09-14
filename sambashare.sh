@@ -35,7 +35,12 @@ read -p "Enter the directory path you want to share: " share_dir
 # Validate directory
 if [ ! -d "$share_dir" ]; then
     echo "Directory does not exist. Creating it..."
-    sudo mkdir -p "$share_dir"
+    if mkdir -p "$share_dir" 2>/dev/null; then
+        echo "Directory created successfully."
+    else
+        echo "Failed to create directory. Attempting with sudo..."
+        sudo mkdir -p "$share_dir"
+    fi
 fi
 
 # Prompt for share name
