@@ -18,6 +18,22 @@ detect_distro() {
     fi
 }
 
+# Detect the Linux distribution
+DISTRO=$(detect_distro)
+
+# Check if whiptail is installed, if not, install it
+if ! command_exists whiptail; then
+    echo "Installing whiptail..."
+    install_packages "$DISTRO" "whiptail"
+fi
+
+# Rest of the script functions...
+
+# Call this at the start of the main script execution
+install_configure_nginx
+
+# Whiptail menu for package selection...
+
 # Function to install packages based on the distribution
 install_packages() {
     local distro="$1"
