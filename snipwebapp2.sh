@@ -125,7 +125,7 @@ EOL
 mkdir -p templates
 
 # Create index.html
-cat > templates/index.html << EOL
+cat > templates/index.html << 'EOF'
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -250,7 +250,7 @@ cat > templates/index.html << EOL
 EOL
 
 # Create snippet_list.html
-cat > templates/snippet_list.html << EOL
+cat > templates/snippet_list.html << 'EOF'
 {% for snippet in snippets %}
     <div class="col-md-4 snippet">
         <div class="card">
@@ -267,7 +267,7 @@ cat > templates/snippet_list.html << EOL
         </div>
     </div>
 {% endfor %}
-EOL
+EOF
 
 # Create Nginx configuration
 sudo tee /etc/nginx/sites-available/snippet_gallery << EOL
