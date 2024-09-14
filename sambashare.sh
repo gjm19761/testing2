@@ -26,6 +26,9 @@ else
     echo "Samba is already installed."
 fi
 
+# Prompt for server name
+read -p "Enter a name for this server: " server_name
+
 # Prompt for directory to share
 read -p "Enter the directory path you want to share: " share_dir
 
@@ -68,6 +71,10 @@ fi
 echo "Adding share to Samba configuration..."
 sudo tee -a /etc/samba/smb.conf > /dev/null << EOL
 
+[global]
+   netbios name = $server_name
+   server string = $server_name
+
 [$share_name]
    path = $share_dir
    guest ok = $guest_ok
@@ -80,6 +87,7 @@ echo "Restarting Samba service..."
 sudo systemctl restart smbd
 
 echo "Samba share setup complete!"
+echo "Server Name: $server_name"
 echo "Share Name: $share_name"
 echo "Share Path: $share_dir"
 echo "Guest Access: $guest_ok"
