@@ -263,9 +263,25 @@ EOL
 }
 # Function to install and configure Nginx
 install_configure_nginx() {
-    sudo apt-get install -y nginx
+    # Install Nginx based on the distribution
+    case "$DISTRO" in
+        ubuntu|debian)
+            sudo apt-get update
+            sudo apt-get install -y nginx
+            ;;
+        fedora|centos|rhel)
+            sudo dnf install -y nginx
+            ;;
+        arch)
+            sudo pacman -Syu --noconfirm nginx
+            ;;
+        *)
+            echo "Unsupported distribution for Nginx installation: $DISTRO"
+            return 1
+            ;;
+    esac
 
-    # Create directories for Nginx configurations
+    # Create directories for Nginx configurations (if they don't exist)
     sudo mkdir -p /etc/nginx/sites-available
     sudo mkdir -p /etc/nginx/sites-enabled
 
@@ -273,6 +289,8 @@ install_configure_nginx() {
     if ! grep -q "include /etc/nginx/sites-enabled/\*;" /etc/nginx/nginx.conf; then
         sudo sed -i '/http {/a \    include /etc/nginx/sites-enabled/*.conf;' /etc/nginx/nginx.conf
     fi
+
+    # ... rest of the function remains the same ...
 
     # Configure Nginx for each application
     configure_nginx_for_app "plex" "32400"
@@ -367,7 +385,7 @@ fi
 IFS=' ' read -r -a selected_packages <<< "$PACKAGES"
 
 # Install Nginx
-install_configure_nginx
+
 
 # Initialize an array to store installed packages and their URLs/ports
 declare -A installed_services
