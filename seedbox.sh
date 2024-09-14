@@ -245,14 +245,18 @@ EOL
     sudo systemctl enable jackett.service
     sudo systemctl start jackett.service
 }
-
 # Function to install and configure Nginx
 install_configure_nginx() {
     sudo apt-get install -y nginx
 
-    # Create a directory for Nginx configurations
+    # Create directories for Nginx configurations
     sudo mkdir -p /etc/nginx/sites-available
     sudo mkdir -p /etc/nginx/sites-enabled
+
+    # Ensure the directories exist in the main Nginx configuration
+    if ! grep -q "include /etc/nginx/sites-enabled/\*;" /etc/nginx/nginx.conf; then
+        sudo sed -i '/http {/a \    include /etc/nginx/sites-enabled/*.conf;' /etc/nginx/nginx.conf
+    fi
 
     # Configure Nginx for each application
     configure_nginx_for_app "plex" "32400"
@@ -267,7 +271,6 @@ install_configure_nginx() {
     # Restart Nginx to apply changes
     sudo systemctl restart nginx
 }
-
 # Function to configure Nginx for an application
 configure_nginx_for_app() {
     local app_name="$1"
