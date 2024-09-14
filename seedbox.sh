@@ -304,7 +304,7 @@ install_configure_nginx() {
 
     # Restart Nginx to apply changes
     sudo systemctl restart nginx
-}
+
 # Function to configure Nginx for an application
 configure_nginx_for_app() {
     local app_name="$1"
