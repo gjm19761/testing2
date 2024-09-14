@@ -77,12 +77,70 @@ install_letsencrypt() {
 # Install and configure applications
 install_deluge() {
     install_packages deluge deluged deluge-web
-    sudo systemctl start deluged
-    sudo systemctl start deluge-web
-    sudo systemctl enable deluged
-    sudo systemctl enable deluge-web
+    
+    # Stop Deluge services if they're running
+    sudo systemctl stop deluged deluge-web
+
+    # Create a deluge group if it doesn't exist
+    sudo groupadd -f deluge
+
+    # Add the current user to the deluge group
+    sudo usermod -aG deluge $USER
+
+    # Configure Deluge to run as the current user
+    sudo sed -i "s/^DELUGED_USER=.*/DELUGED_USER=\"$USER\"/" /etc/default/deluged
+    sudo sed -i "s/^DELUGE_WEB_USER=.*/DELUGE_WEB_USER=\"$USER\"/" /etc/default/deluge-web
+
+    # Create necessary directories and set permissions
+    sudo mkdir -p /var/log/deluge
+    sudo chown -R $USER:deluge /var/log/deluge
+    sudo chmod -R 750 /var/log/deluge
+
+    # Update the systemd service files
+    sudo tee /etc/systemd/system/deluged.service > /dev/null <<EOL
+[Unit]
+Description=Deluge Bittorrent Client Daemon
+After=network-online.target
+
+[Service]
+Type=simple
+User=$USER
+Group=deluge
+UMask=007
+ExecStart=/usr/bin/deluged -d
+Restart=on-failure
+TimeoutStopSec=300
+
+[Install]
+WantedBy=multi-user.target
+EOL
+
+    sudo tee /etc/systemd/system/deluge-web.service > /dev/null <<EOL
+[Unit]
+Description=Deluge Bittorrent Client Web Interface
+After=network-online.target deluged.service
+Wants=deluged.service
+
+[Service]
+Type=simple
+User=$USER
+Group=deluge
+UMask=027
+ExecStart=/usr/bin/deluge-web
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+EOL
+
+    # Reload systemd, enable and start Deluge services
+    sudo systemctl daemon-reload
+    sudo systemctl enable deluged deluge-web
+    sudo systemctl start deluged deluge-web
+
     configure_nginx_for_app "deluge" "8112" "$DOMAIN"
     echo "Deluge installed. URL: http://deluge.$DOMAIN or http://$IP:8112"
+    echo "Please restart your system or log out and log back in for group changes to take effect."
 }
 
 install_plex() {
