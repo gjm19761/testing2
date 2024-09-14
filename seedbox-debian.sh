@@ -260,6 +260,22 @@ install_transmission() {
     echo "Transmission installed. URL: http://transmission.$DOMAIN or http://$IP:9091"
 }
 
+create_media_directories() {
+    local base_dir="$HOME"
+    local dirs=("downloads" "movies" "tv")
+
+    for dir in "${dirs[@]}"; do
+        local full_path="$base_dir/$dir"
+        if [ ! -d "$full_path" ]; then
+            mkdir -p "$full_path"
+            echo "Created directory: $full_path"
+        else
+            echo "Directory already exists: $full_path"
+        fi
+    done
+}
+
+
 # Check if whiptail is installed, if not, install it
 if ! command_exists whiptail; then
     echo "Installing whiptail..."
@@ -291,6 +307,9 @@ fi
 
 # Get the server's IP address
 IP=$(hostname -I | awk '{print $1}')
+
+# create media dirs
+create_media_directories
 
 # Whiptail menu for package selection (sorted alphabetically)
 PACKAGES=$(whiptail --title "Seedbox Installation" --checklist \
