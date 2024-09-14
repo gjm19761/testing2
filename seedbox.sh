@@ -291,7 +291,7 @@ install_configure_nginx() {
     fi
 
     # ... rest of the function remains the same ...
-
+}
     # Configure Nginx for each application
     configure_nginx_for_app "plex" "32400"
     configure_nginx_for_app "radarr" "7878"
