@@ -1,3 +1,4 @@
+
 #!/bin/bash
 
 # Function to check if a command exists
@@ -29,11 +30,12 @@ install_configure_nginx() {
 configure_nginx_for_app() {
     local app_name="$1"
     local app_port="$2"
+    local domain="$3"
 
     sudo tee "/etc/nginx/sites-available/$app_name.conf" > /dev/null <<EOL
 server {
     listen 80;
-    server_name $app_name.yourdomain.com;
+    server_name $app_name.$domain;
 
     location / {
         proxy_pass http://localhost:$app_port;
@@ -50,17 +52,10 @@ EOL
 
 # Install and configure Let's Encrypt
 install_letsencrypt() {
+    local domain="$1"
     install_packages certbot python3-certbot-nginx
 
-    local domain
-    domain=$(whiptail --inputbox "Enter your domain name:" 8 78 --title "Domain for SSL" 3>&1 1>&2 2>&3)
-
-    if [ -z "$domain" ]; then
-        echo "Domain name is required. Skipping Let's Encrypt configuration."
-        return
-    fi
-
-    sudo certbot --nginx -d "$domain" --non-interactive --agree-tos --email your@email.com
+    sudo certbot --nginx -d "*.$domain" --non-interactive --agree-tos --email your@email.com
 
     # Update Nginx configurations to use SSL
     for conf in /etc/nginx/sites-available/*.conf; do
@@ -76,8 +71,8 @@ install_letsencrypt() {
 # Install and configure applications
 install_deluge() {
     install_packages deluge deluged deluge-web
-    configure_nginx_for_app "deluge" "8112"
-    echo "Deluge installed. URL: http://localhost:8112"
+    configure_nginx_for_app "deluge" "8112" "$DOMAIN"
+    echo "Deluge installed. URL: http://deluge.$DOMAIN"
 }
 
 install_plex() {
@@ -97,8 +92,8 @@ install_plex() {
     # Start Plex service
     sudo systemctl start plexmediaserver
     
-    configure_nginx_for_app "plex" "32400"
-    echo "Plex installed. URL: http://localhost:32400/web"
+    configure_nginx_for_app "plex" "32400" "$DOMAIN"
+    echo "Plex installed. URL: http://plex.$DOMAIN/web"
 }
 
 install_radarr() {
@@ -121,16 +116,16 @@ WantedBy=multi-user.target
 EOL
     sudo systemctl enable radarr
     sudo systemctl start radarr
-    configure_nginx_for_app "radarr" "7878"
-    echo "Radarr installed. URL: http://localhost:7878"
+    configure_nginx_for_app "radarr" "7878" "$DOMAIN"
+    echo "Radarr installed. URL: http://radarr.$DOMAIN"
 }
 
 install_sonarr() {
     sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 2009837CBFFD68F45BC180471F4F90DE2A9B4BF8
     echo "deb https://apt.sonarr.tv/debian buster main" | sudo tee /etc/apt/sources.list.d/sonarr.list
     install_packages sonarr
-    configure_nginx_for_app "sonarr" "8989"
-    echo "Sonarr installed. URL: http://localhost:8989"
+    configure_nginx_for_app "sonarr" "8989" "$DOMAIN"
+    echo "Sonarr installed. URL: http://sonarr.$DOMAIN"
 }
 
 install_jackett() {
@@ -153,8 +148,8 @@ WantedBy=multi-user.target
 EOL
     sudo systemctl enable jackett
     sudo systemctl start jackett
-    configure_nginx_for_app "jackett" "9117"
-    echo "Jackett installed. URL: http://localhost:9117"
+    configure_nginx_for_app "jackett" "9117" "$DOMAIN"
+    echo "Jackett installed. URL: http://jackett.$DOMAIN"
 }
 
 install_ombi() {
@@ -176,8 +171,8 @@ WantedBy=multi-user.target
 EOL
     sudo systemctl enable ombi
     sudo systemctl start ombi
-    configure_nginx_for_app "ombi" "5000"
-    echo "Ombi installed. URL: http://localhost:5000"
+    configure_nginx_for_app "ombi" "5000" "$DOMAIN"
+    echo "Ombi installed. URL: http://ombi.$DOMAIN"
 }
 
 install_tautulli() {
@@ -199,8 +194,8 @@ WantedBy=multi-user.target
 EOL
     sudo systemctl enable tautulli
     sudo systemctl start tautulli
-    configure_nginx_for_app "tautulli" "8181"
-    echo "Tautulli installed. URL: http://localhost:8181"
+    configure_nginx_for_app "tautulli" "8181" "$DOMAIN"
+    echo "Tautulli installed. URL: http://tautulli.$DOMAIN"
 }
 
 install_rtorrent_rutorrent() {
@@ -209,8 +204,8 @@ install_rtorrent_rutorrent() {
     git clone https://github.com/Novik/ruTorrent.git
     sudo mv ruTorrent /var/www/
     sudo chown -R www-data:www-data /var/www/ruTorrent
-    configure_nginx_for_app "rutorrent" "80"
-    echo "rTorrent with ruTorrent installed. URL: http://localhost/rutorrent"
+    configure_nginx_for_app "rutorrent" "80" "$DOMAIN"
+    echo "rTorrent with ruTorrent installed. URL: http://rutorrent.$DOMAIN"
 }
 
 install_qbittorrent() {
@@ -230,14 +225,14 @@ WantedBy=multi-user.target
 EOL
     sudo systemctl enable qbittorrent
     sudo systemctl start qbittorrent
-    configure_nginx_for_app "qbittorrent" "8080"
-    echo "qBittorrent installed. URL: http://localhost:8080"
+    configure_nginx_for_app "qbittorrent" "8080" "$DOMAIN"
+    echo "qBittorrent installed. URL: http://qbittorrent.$DOMAIN"
 }
 
 install_transmission() {
     install_packages transmission-daemon
-    configure_nginx_for_app "transmission" "9091"
-    echo "Transmission installed. URL: http://localhost:9091"
+    configure_nginx_for_app "transmission" "9091" "$DOMAIN"
+    echo "Transmission installed. URL: http://transmission.$DOMAIN"
 }
 
 # Check if whiptail is installed, if not, install it
@@ -255,12 +250,25 @@ textbox=green,black
 button=black,green
 '
 
+# Ask user if they want to setup apps with a domain
+USE_DOMAIN=$(whiptail --title "Domain Setup" --yesno "Do you want to setup the apps with a domain in Nginx configuration?" 10 60 3>&1 1>&2 2>&3)
+USE_DOMAIN=$?
+
+if [ $USE_DOMAIN -eq 0 ]; then
+    DOMAIN=$(whiptail --inputbox "Enter your domain name (e.g., example.com):" 8 78 --title "Domain Name" 3>&1 1>&2 2>&3)
+    
+    # Ask if they want to use Let's Encrypt SSL
+    USE_SSL=$(whiptail --title "SSL Setup" --yesno "Do you want to setup Let's Encrypt SSL for your domain?" 10 60 3>&1 1>&2 2>&3)
+    USE_SSL=$?
+else
+    DOMAIN="localhost"
+fi
+
 # Whiptail menu for package selection (sorted alphabetically)
 PACKAGES=$(whiptail --title "Seedbox Installation" --checklist \
-"Choose the packages to install:" 20 60 12 \
+"Choose the packages to install:" 20 60 11 \
 "deluge" "Deluge" OFF \
 "jackett" "Jackett" OFF \
-"letsencrypt" "Let's Encrypt SSL" OFF \
 "ombi" "Ombi" OFF \
 "plex" "Plex Media Server" OFF \
 "qbittorrent" "qBittorrent" OFF \
@@ -290,49 +298,55 @@ for package in $PACKAGES; do
     case "$package" in
         deluge) 
             install_deluge
-            installed_apps["Deluge"]="http://localhost:8112"
+            installed_apps["Deluge"]="http://deluge.$DOMAIN"
             ;;
         jackett) 
             install_jackett
-            installed_apps["Jackett"]="http://localhost:9117"
-            ;;
-        letsencrypt) 
-            install_letsencrypt
+            installed_apps["Jackett"]="http://jackett.$DOMAIN"
             ;;
         ombi) 
             install_ombi
-            installed_apps["Ombi"]="http://localhost:5000"
+            installed_apps["Ombi"]="http://ombi.$DOMAIN"
             ;;
         plex) 
             install_plex
-            installed_apps["Plex"]="http://localhost:32400/web"
+            installed_apps["Plex"]="http://plex.$DOMAIN/web"
             ;;
         qbittorrent) 
             install_qbittorrent
-            installed_apps["qBittorrent"]="http://localhost:8080"
+            installed_apps["qBittorrent"]="http://qbittorrent.$DOMAIN"
             ;;
         radarr) 
             install_radarr
-            installed_apps["Radarr"]="http://localhost:7878"
+            installed_apps["Radarr"]="http://radarr.$DOMAIN"
             ;;
         rtorrent) 
             install_rtorrent_rutorrent
-            installed_apps["ruTorrent"]="http://localhost/rutorrent"
+            installed_apps["ruTorrent"]="http://rutorrent.$DOMAIN"
             ;;
         sonarr) 
             install_sonarr
-            installed_apps["Sonarr"]="http://localhost:8989"
+            installed_apps["Sonarr"]="http://sonarr.$DOMAIN"
             ;;
         tautulli) 
             install_tautulli
-            installed_apps["Tautulli"]="http://localhost:8181"
+            installed_apps["Tautulli"]="http://tautulli.$DOMAIN"
             ;;
         transmission) 
             install_transmission
-            installed_apps["Transmission"]="http://localhost:9091"
+            installed_apps["Transmission"]="http://transmission.$DOMAIN"
             ;;
     esac
 done
+
+# Install Let's Encrypt SSL if requested
+if [ $USE_DOMAIN -eq 0 ] && [ $USE_SSL -eq 0 ]; then
+    install_letsencrypt "$DOMAIN"
+    # Update URLs to use HTTPS
+    for app in "${!installed_apps[@]}"; do
+        installed_apps[$app]=$(echo "${installed_apps[$app]}" | sed 's/http:/https:/')
+    done
+fi
 
 # Restart Nginx to apply all changes
 sudo systemctl restart nginx
@@ -343,7 +357,3 @@ for app in "${!installed_apps[@]}"; do
 done
 
 echo "Please configure each application as needed."
-
-
-
-
