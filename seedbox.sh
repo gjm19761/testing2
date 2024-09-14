@@ -20,7 +20,7 @@ detect_distro() {
 
 # Detect the Linux distribution
 DISTRO=$(detect_distro)
-
+install_configure_nginx
 # Check if whiptail is installed, if not, install it
 if ! command_exists whiptail; then
     echo "Installing whiptail..."
@@ -30,7 +30,7 @@ fi
 # Rest of the script functions...
 
 # Call this at the start of the main script execution
-install_configure_nginx
+
 
 # Whiptail menu for package selection...
 
