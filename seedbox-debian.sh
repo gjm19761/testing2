@@ -32,10 +32,16 @@ configure_nginx_for_app() {
     local app_port="$2"
     local domain="$3"
 
+    if [ "$domain" = "localhost" ]; then
+        local server_name="$app_name.localhost"
+    else
+        local server_name="$app_name.$domain"
+    fi
+
     sudo tee "/etc/nginx/sites-available/$app_name.conf" > /dev/null <<EOL
 server {
     listen 80;
-    server_name $app_name.$domain;
+    server_name $server_name;
 
     location / {
         proxy_pass http://localhost:$app_port;
@@ -71,8 +77,12 @@ install_letsencrypt() {
 # Install and configure applications
 install_deluge() {
     install_packages deluge deluged deluge-web
+    sudo systemctl start deluged
+    sudo systemctl start deluge-web
+    sudo systemctl enable deluged
+    sudo systemctl enable deluge-web
     configure_nginx_for_app "deluge" "8112" "$DOMAIN"
-    echo "Deluge installed. URL: http://deluge.$DOMAIN"
+    echo "Deluge installed. URL: http://deluge.$DOMAIN or http://$IP:8112"
 }
 
 install_plex() {
@@ -93,7 +103,7 @@ install_plex() {
     sudo systemctl start plexmediaserver
     
     configure_nginx_for_app "plex" "32400" "$DOMAIN"
-    echo "Plex installed. URL: http://plex.$DOMAIN/web"
+    echo "Plex installed. URL: http://plex.$DOMAIN/web or http://$IP:32400/web"
 }
 
 install_radarr() {
@@ -117,7 +127,7 @@ EOL
     sudo systemctl enable radarr
     sudo systemctl start radarr
     configure_nginx_for_app "radarr" "7878" "$DOMAIN"
-    echo "Radarr installed. URL: http://radarr.$DOMAIN"
+    echo "Radarr installed. URL: http://radarr.$DOMAIN or http://$IP:7878"
 }
 
 install_sonarr() {
@@ -125,7 +135,7 @@ install_sonarr() {
     echo "deb https://apt.sonarr.tv/debian buster main" | sudo tee /etc/apt/sources.list.d/sonarr.list
     install_packages sonarr
     configure_nginx_for_app "sonarr" "8989" "$DOMAIN"
-    echo "Sonarr installed. URL: http://sonarr.$DOMAIN"
+    echo "Sonarr installed. URL: http://sonarr.$DOMAIN or http://$IP:8989"
 }
 
 install_jackett() {
@@ -149,13 +159,16 @@ EOL
     sudo systemctl enable jackett
     sudo systemctl start jackett
     configure_nginx_for_app "jackett" "9117" "$DOMAIN"
-    echo "Jackett installed. URL: http://jackett.$DOMAIN"
+    echo "Jackett installed. URL: http://jackett.$DOMAIN or http://$IP:9117"
 }
 
 install_ombi() {
+    install_packages libicu66 libssl1.1
     wget https://github.com/Ombi-app/Ombi/releases/latest/download/linux-x64.tar.gz
-    tar -xvzf linux-x64.tar.gz
-    sudo mv Ombi /opt/
+    tar -xvzf linux-x64.tar.gz -C /opt/
+    sudo mkdir -p /opt/Ombi
+    sudo mv /opt/Ombi-linux-x64/* /opt/Ombi/
+    sudo rm -rf /opt/Ombi-linux-x64
     sudo tee /etc/systemd/system/ombi.service > /dev/null <<EOL
 [Unit]
 Description=Ombi Service
@@ -163,8 +176,10 @@ After=network.target
 
 [Service]
 User=$USER
-ExecStart=/opt/Ombi/Ombi
-Restart=on-failure
+WorkingDirectory=/opt/Ombi
+ExecStart=/opt/Ombi/Ombi --host http://0.0.0.0:5000
+Restart=always
+RestartSec=10
 
 [Install]
 WantedBy=multi-user.target
@@ -172,7 +187,7 @@ EOL
     sudo systemctl enable ombi
     sudo systemctl start ombi
     configure_nginx_for_app "ombi" "5000" "$DOMAIN"
-    echo "Ombi installed. URL: http://ombi.$DOMAIN"
+    echo "Ombi installed. URL: http://ombi.$DOMAIN or http://$IP:5000"
 }
 
 install_tautulli() {
@@ -195,7 +210,7 @@ EOL
     sudo systemctl enable tautulli
     sudo systemctl start tautulli
     configure_nginx_for_app "tautulli" "8181" "$DOMAIN"
-    echo "Tautulli installed. URL: http://tautulli.$DOMAIN"
+    echo "Tautulli installed. URL: http://tautulli.$DOMAIN or http://$IP:8181"
 }
 
 install_rtorrent_rutorrent() {
@@ -205,7 +220,7 @@ install_rtorrent_rutorrent() {
     sudo mv ruTorrent /var/www/
     sudo chown -R www-data:www-data /var/www/ruTorrent
     configure_nginx_for_app "rutorrent" "80" "$DOMAIN"
-    echo "rTorrent with ruTorrent installed. URL: http://rutorrent.$DOMAIN"
+    echo "rTorrent with ruTorrent installed. URL: http://rutorrent.$DOMAIN or http://$IP/rutorrent"
 }
 
 install_qbittorrent() {
@@ -226,13 +241,13 @@ EOL
     sudo systemctl enable qbittorrent
     sudo systemctl start qbittorrent
     configure_nginx_for_app "qbittorrent" "8080" "$DOMAIN"
-    echo "qBittorrent installed. URL: http://qbittorrent.$DOMAIN"
+    echo "qBittorrent installed. URL: http://qbittorrent.$DOMAIN or http://$IP:8080"
 }
 
 install_transmission() {
     install_packages transmission-daemon
     configure_nginx_for_app "transmission" "9091" "$DOMAIN"
-    echo "Transmission installed. URL: http://transmission.$DOMAIN"
+    echo "Transmission installed. URL: http://transmission.$DOMAIN or http://$IP:9091"
 }
 
 # Check if whiptail is installed, if not, install it
@@ -263,6 +278,9 @@ if [ $USE_DOMAIN -eq 0 ]; then
 else
     DOMAIN="localhost"
 fi
+
+# Get the server's IP address
+IP=$(hostname -I | awk '{print $1}')
 
 # Whiptail menu for package selection (sorted alphabetically)
 PACKAGES=$(whiptail --title "Seedbox Installation" --checklist \
@@ -298,43 +316,43 @@ for package in $PACKAGES; do
     case "$package" in
         deluge) 
             install_deluge
-            installed_apps["Deluge"]="http://deluge.$DOMAIN"
+            installed_apps["Deluge"]="http://deluge.$DOMAIN or http://$IP:8112"
             ;;
         jackett) 
             install_jackett
-            installed_apps["Jackett"]="http://jackett.$DOMAIN"
+            installed_apps["Jackett"]="http://jackett.$DOMAIN or http://$IP:9117"
             ;;
         ombi) 
             install_ombi
-            installed_apps["Ombi"]="http://ombi.$DOMAIN"
+            installed_apps["Ombi"]="http://ombi.$DOMAIN or http://$IP:5000"
             ;;
         plex) 
             install_plex
-            installed_apps["Plex"]="http://plex.$DOMAIN/web"
+            installed_apps["Plex"]="http://plex.$DOMAIN/web or http://$IP:32400/web"
             ;;
         qbittorrent) 
             install_qbittorrent
-            installed_apps["qBittorrent"]="http://qbittorrent.$DOMAIN"
+            installed_apps["qBittorrent"]="http://qbittorrent.$DOMAIN or http://$IP:8080"
             ;;
         radarr) 
             install_radarr
-            installed_apps["Radarr"]="http://radarr.$DOMAIN"
+            installed_apps["Radarr"]="http://radarr.$DOMAIN or http://$IP:7878"
             ;;
         rtorrent) 
             install_rtorrent_rutorrent
-            installed_apps["ruTorrent"]="http://rutorrent.$DOMAIN"
+            installed_apps["ruTorrent"]="http://rutorrent.$DOMAIN or http://$IP/rutorrent"
             ;;
         sonarr) 
             install_sonarr
-            installed_apps["Sonarr"]="http://sonarr.$DOMAIN"
+            installed_apps["Sonarr"]="http://sonarr.$DOMAIN or http://$IP:8989"
             ;;
         tautulli) 
             install_tautulli
-            installed_apps["Tautulli"]="http://tautulli.$DOMAIN"
+            installed_apps["Tautulli"]="http://tautulli.$DOMAIN or http://$IP:8181"
             ;;
         transmission) 
             install_transmission
-            installed_apps["Transmission"]="http://transmission.$DOMAIN"
+            installed_apps["Transmission"]="http://transmission.$DOMAIN or http://$IP:9091"
             ;;
     esac
 done
@@ -351,9 +369,5 @@ fi
 # Restart Nginx to apply all changes
 sudo systemctl restart nginx
 
-echo "Installation complete. Here are the URLs for the installed applications:"
-for app in "${!installed_apps[@]}"; do
-    echo "$app: ${installed_apps[$app]}"
-done
 
-echo "Please configure each application as needed."
+
