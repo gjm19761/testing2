@@ -119,8 +119,6 @@ def delete_snippet(id):
     return redirect(url_for('index'))
 
 # ... (other routes remain unchanged)
-
-
 EOL
 
 # Create templates directory
