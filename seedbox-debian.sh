@@ -45,6 +45,9 @@ server {
 
     location / {
         proxy_pass http://localhost:$app_port;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection "upgrade";
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
@@ -287,8 +290,30 @@ install_rtorrent_rutorrent() {
     git clone https://github.com/Novik/ruTorrent.git
     sudo mv ruTorrent /var/www/
     sudo chown -R www-data:www-data /var/www/ruTorrent
-    configure_nginx_for_app "rutorrent" "80" "$DOMAIN"
-    echo "rTorrent with ruTorrent installed. URL: http://rutorrent.$DOMAIN or http://$IP/rutorrent"
+    
+    # Configure Nginx for ruTorrent
+    sudo tee "/etc/nginx/sites-available/rutorrent.conf" > /dev/null <<EOL
+server {
+    listen 80;
+    server_name rutorrent.$DOMAIN;
+    root /var/www/ruTorrent;
+    index index.html index.php;
+
+    location / {
+        try_files \$uri \$uri/ =404;
+    }
+
+    location ~ \.php$ {
+        fastcgi_pass unix:/var/run/php/php7.4-fpm.sock;
+        fastcgi_index index.php;
+        include fastcgi_params;
+    }
+}
+EOL
+
+    sudo ln -sf "/etc/nginx/sites-available/rutorrent.conf" "/etc/nginx/sites-enabled/"
+    
+    echo "rTorrent with ruTorrent installed. URL: http://rutorrent.$DOMAIN"
 }
 
 install_qbittorrent() {
@@ -396,7 +421,7 @@ install_configure_nginx
 declare -A installed_apps
 
 # Install selected packages
-for package in $PACKAGES; do
+ffor package in $PACKAGES; do
     package=$(echo "$package" | tr -d '"')
     echo "Installing $package..."
     
@@ -427,7 +452,7 @@ for package in $PACKAGES; do
             ;;
         rtorrent) 
             install_rtorrent_rutorrent
-            installed_apps["ruTorrent"]="http://rutorrent.$DOMAIN or http://$IP/rutorrent"
+            installed_apps["ruTorrent"]="http://rutorrent.$DOMAIN"
             ;;
         sonarr) 
             install_sonarr
