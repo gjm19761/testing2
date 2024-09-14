@@ -12,10 +12,19 @@ confirm() {
     done
 }
 
-# Install Samba
-echo "Installing Samba..."
-sudo apt-get update
-sudo apt-get install -y samba
+# Function to check if a package is installed
+is_installed() {
+    dpkg -s "$1" >/dev/null 2>&1
+}
+
+# Check and install Samba if not already installed
+if ! is_installed samba; then
+    echo "Installing Samba..."
+    sudo apt-get update
+    sudo apt-get install -y samba
+else
+    echo "Samba is already installed."
+fi
 
 # Prompt for directory to share
 read -p "Enter the directory path you want to share: " share_dir
@@ -43,6 +52,18 @@ else
     writable="no"
 fi
 
+# Prompt for Avahi installation
+if confirm "Do you want to install Avahi for network discovery?"; then
+    if ! is_installed avahi-daemon; then
+        echo "Installing Avahi..."
+        sudo apt-get install -y avahi-daemon
+        sudo systemctl enable avahi-daemon
+        sudo systemctl start avahi-daemon
+    else
+        echo "Avahi is already installed."
+    fi
+fi
+
 # Add configuration to smb.conf
 echo "Adding share to Samba configuration..."
 sudo tee -a /etc/samba/smb.conf > /dev/null << EOL
@@ -63,3 +84,6 @@ echo "Share Name: $share_name"
 echo "Share Path: $share_dir"
 echo "Guest Access: $guest_ok"
 echo "Writable: $writable"
+if is_installed avahi-daemon; then
+    echo "Avahi is installed for network discovery"
+fi
