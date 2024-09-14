@@ -1,3 +1,21 @@
+#!/bin/bash
+
+# Ask for the server name
+read -p "Enter your server name (e.g., example.com): " SERVER_NAME
+
+# Create project directory
+mkdir -p snippet_gallery
+cd snippet_gallery
+
+# Create virtual environment
+python3 -m venv venv
+source venv/bin/activate
+
+# Install required packages
+pip install Flask gunicorn
+
+# Create app.py
+cat > app.py << EOL
 from flask import Flask, render_template, request, redirect, url_for, jsonify
 from werkzeug.utils import secure_filename
 import os
@@ -79,9 +97,13 @@ def filter_snippets(category):
 
 if __name__ == '__main__':
     app.run(debug=True)
+EOL
 
-# Save this HTML template in a file named 'index.html' in a 'templates' folder
-"""
+# Create templates directory
+mkdir -p templates
+
+# Create index.html
+cat > templates/index.html << EOL
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -169,14 +191,14 @@ if __name__ == '__main__':
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         function loadSnippet(id) {
-            fetch(`/load_snippet/${id}`)
+            fetch(\`/load_snippet/\${id}\`)
                 .then(response => response.json())
                 .then(data => {
                     document.getElementById('modalSnippetText').textContent = data.text;
-                    document.getElementById('modalSnippetCategory').textContent = `Category: ${data.category}`;
+                    document.getElementById('modalSnippetCategory').textContent = \`Category: \${data.category}\`;
                     let img = document.getElementById('modalSnippetImage');
                     if (data.image_filename) {
-                        img.src = `/static/uploads/${data.image_filename}`;
+                        img.src = \`/static/uploads/\${data.image_filename}\`;
                         img.style.display = 'block';
                     } else {
                         img.style.display = 'none';
@@ -188,7 +210,7 @@ if __name__ == '__main__':
         document.getElementById('categoryFilter').addEventListener('change', function() {
             let category = this.value;
             if (category) {
-                fetch(`/filter_snippets/${category}`)
+                fetch(\`/filter_snippets/\${category}\`)
                     .then(response => response.text())
                     .then(html => {
                         document.getElementById('snippetGallery').innerHTML = html;
@@ -200,10 +222,10 @@ if __name__ == '__main__':
     </script>
 </body>
 </html>
-"""
+EOL
 
-# Save this HTML template in a file named 'snippet_list.html' in the 'templates' folder
-"""
+# Create snippet_list.html
+cat > templates/snippet_list.html << EOL
 {% for snippet in snippets %}
     <div class="col-md-4 snippet">
         <div class="card">
@@ -217,6 +239,58 @@ if __name__ == '__main__':
         </div>
     </div>
 {% endfor %}
-"""
+EOL
 
+# Create Nginx configuration
+sudo tee /etc/nginx/sites-available/snippet_gallery << EOL
+server {
+    listen 80;
+    server_name $SERVER_NAME;
 
+    location / {
+        proxy_pass http://127.0.0.1:8000;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+    }
+
+    location /static {
+        alias $(pwd)/static;
+    }
+}
+EOL
+
+# Create symbolic link to enable the site
+sudo ln -s /etc/nginx/sites-available/snippet_gallery /etc/nginx/sites-enabled/
+
+# Test Nginx configuration
+sudo nginx -t
+
+# Restart Nginx
+sudo systemctl restart nginx
+
+# Create a systemd service file for Gunicorn
+sudo tee /etc/systemd/system/snippet_gallery.service << EOL
+[Unit]
+Description=Gunicorn instance to serve Snippet Gallery
+After=network.target
+
+[Service]
+User=$(whoami)
+Group=www-data
+WorkingDirectory=$(pwd)
+Environment="PATH=$(pwd)/venv/bin"
+ExecStart=$(pwd)/venv/bin/gunicorn --workers 3 --bind 127.0.0.1:8000 app:app
+
+[Install]
+WantedBy=multi-user.target
+EOL
+
+# Reload systemd, enable and start the service
+sudo systemctl daemon-reload
+sudo systemctl enable snippet_gallery
+sudo systemctl start snippet_gallery
+
+echo "Snippet Gallery setup complete!"
+echo "Your application is now configured to run on: $SERVER_NAME"
+echo "Make sure your DNS is properly configured to point to this server."
+echo "You may need to configure your firewall to allow HTTP traffic."
