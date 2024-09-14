@@ -421,7 +421,7 @@ install_configure_nginx
 declare -A installed_apps
 
 # Install selected packages
-ffor package in $PACKAGES; do
+for package in $PACKAGES; do
     package=$(echo "$package" | tr -d '"')
     echo "Installing $package..."
     
