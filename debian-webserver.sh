@@ -45,6 +45,11 @@ else
     sudo chown www-data:www-data /var/www
 fi
 
+# Create directory for server
+echo -e "${YELLOW}Creating directory for $SERVER_NAME...${NC}"
+sudo mkdir -p /var/www/$SERVER_NAME
+sudo chown www-data:www-data /var/www/$SERVER_NAME
+
 # Configure Nginx
 echo -e "${YELLOW}Configuring Nginx...${NC}"
 sudo tee /etc/nginx/sites-available/$SERVER_NAME > /dev/null << EOL
@@ -52,7 +57,7 @@ server {
     listen 80;
     listen [::]:80;
 
-    root /var/www;
+    root /var/www/$SERVER_NAME;
     index index.html index.htm index.nginx-debian.html;
 
     server_name $SERVER_NAME;
@@ -99,7 +104,7 @@ server {
     listen 443 ssl http2;
     listen [::]:443 ssl http2;
 
-    root /var/www;
+    root /var/www/$SERVER_NAME;
     index index.html index.htm index.nginx-debian.html;
 
     server_name $SERVER_NAME;
@@ -119,11 +124,9 @@ EOL
 fi
 
 echo -e "${GREEN}Nginx setup complete!${NC}"
-echo -e "${BLUE}Your web content should be placed in /var/www${NC}"
+echo -e "${BLUE}Your web content should be placed in /var/www/$SERVER_NAME${NC}"
 echo -e "${BLUE}Nginx is now serving content for $SERVER_NAME${NC}"
 if [[ "$INSTALL_SSL" =~ ^[Yy]$ ]]; then
     echo -e "${GREEN}SSL certificate has been installed and configured${NC}"
 fi
-
-
 
