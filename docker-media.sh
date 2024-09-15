@@ -204,10 +204,10 @@ create_config_and_start() {
 }
 
 # Select media applications
-readarray -t selected_media < <(select_items "Select media applications:" "${media_containers[@]}")
+selected_media=($(select_items "Select media applications:" "${media_containers[@]}"))
 
 # Select torrent downloaders
-readarray -t selected_torrent < <(select_items "Select torrent downloaders:" "${torrent_downloaders[@]}")
+selected_torrent=($(select_items "Select torrent downloaders:" "${torrent_downloaders[@]}"))
 
 # Create configurations and start containers for selected media applications
 for container in "${selected_media[@]}"; do
