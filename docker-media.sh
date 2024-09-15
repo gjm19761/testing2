@@ -1,6 +1,36 @@
 #!/bin/bash
 
-set -x  # Enable debug mode
+# Function to check if a command exists
+command_exists() {
+    command -v "$1" >/dev/null 2>&1
+}
+
+# Function to install Docker
+install_docker() {
+    echo "Installing Docker..."
+    curl -fsSL https://get.docker.com -o get-docker.sh
+    sudo sh get-docker.sh
+    sudo usermod -aG docker $USER
+    echo "Docker installed successfully. Please log out and log back in to use Docker without sudo."
+}
+
+# Function to install Docker Compose
+install_docker_compose() {
+    echo "Installing Docker Compose..."
+    sudo curl -L "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+    sudo chmod +x /usr/local/bin/docker-compose
+    echo "Docker Compose installed successfully."
+}
+
+# Check and install Docker if not present
+if ! command_exists docker; then
+    install_docker
+fi
+
+# Check and install Docker Compose if not present
+if ! command_exists docker-compose; then
+    install_docker_compose
+fi
 
 # Function to create directory if it doesn't exist
 create_directory() {
@@ -10,23 +40,6 @@ create_directory() {
     fi
 }
 
-<<<<<<< Updated upstream
-# Ask user about shared directory
-read -p "Do you want to use a shared directory for media? (y/n): " use_shared_dir
-if [[ $use_shared_dir =~ ^[Yy]$ ]]; then
-    read -p "Enter the path for the shared media directory: " shared_media_dir
-    create_directory "$shared_media_dir"
-    shared_volume_arg="-v $shared_media_dir:/media"
-else
-    shared_volume_arg=""
-fi
-
-echo "Debug: Shared volume arg is $shared_volume_arg"
-
-# Create appdata directory in user's home
-appdata_dir="$HOME/appdata"
-create_directory "$appdata_dir"
-=======
 # Function to create a whiptail checklist from an array
 create_checklist() {
     local arr=("$@")
@@ -37,61 +50,24 @@ create_checklist() {
     done
     echo "${options[@]}"
 }
->>>>>>> Stashed changes
 
-echo "Debug: Appdata directory is $appdata_dir"
-
-# Simplified media containers and torrent downloaders arrays
+# Arrays of media containers and torrent downloaders
 media_containers=(
-    "plex:32400:plexinc/pms-docker"
-    "emby:8096:emby/embyserver"
-    "jellyfin:8920:jellyfin/jellyfin"
+    "plex:32400" "emby:8096" "jellyfin:8920" "kodi:8080" "airsonic:4040" "beets:8337" "calibre-web:8083" 
+    "deemix:6595" "dizquetv:8000" "filebrowser:8090" "freshrss:8081" "grocy:8082" "headphones:8181" 
+    "heimdall:8085" "jackett:9117" "jellyseerr:5055" "kavita:5000" "komga:8086" "lazylibrarian:5299" 
+    "lidarr:8686" "lychee:8087" "mediaelch:8088" "medusa:8081" "mstream:3000" "mylar3:8090" 
+    "navidrome:4533" "nzbget:6789" "nzbhydra2:5076" "ombi:3579" "organizr:8089" "photoprism:2342" 
+    "photoview:8091" "piwigo:8092" "prowlarr:9696" "radarr:7878" "readarr:8787" "requestrr:4545" 
+    "sickchill:8081" "sonarr:8989" "stash:9999" "tautulli:8181" "transmission:9091" "ubooquity:2202" 
+    "unmanic:8888" "watchtower:8093" "yacht:8094" "yourls:8095" "znc:6697" "airsonic-advanced:4040" "bazarr:6767"
 )
 
 torrent_downloaders=(
-    "rtorrent-rutorrent:8080:diameter/rtorrent-rutorrent:latest"
-    "deluge:8112:linuxserver/deluge"
+    "transmission:9091" "deluge:8112" "qbittorrent:8080" "rtorrent:5000" "aria2:6800" "vuze:9091" 
+    "bittorrent:8080" "utorrent:8080" "tixati:8888" "webtorrent:8000"
 )
 
-<<<<<<< Updated upstream
-echo "Debug: Arrays defined"
-
-# Simplified selection function
-select_items() {
-    local title="$1"
-    shift
-    local array=("$@")
-    
-    echo "$title"
-    for i in "${!array[@]}"; do
-        echo "$((i+1)). ${array[$i]%%:*}"
-    done
-    
-    read -p "Enter your choice (1-${#array[@]}, or 0 for none): " choice
-    
-    if [[ $choice -eq 0 ]]; then
-        echo ""
-    elif [[ $choice -ge 1 && $choice -le ${#array[@]} ]]; then
-        echo "${array[$((choice-1))]}"
-    else
-        echo "Invalid choice. No selection made."
-    fi
-}
-
-echo "Debug: Before media selection"
-
-# Select media application
-selected_media=$(select_items "Select a media application:" "${media_containers[@]}")
-
-echo "Debug: Media selection done. Selected: $selected_media"
-
-# Select torrent downloader
-selected_torrent=$(select_items "Select a torrent downloader:" "${torrent_downloaders[@]}")
-
-echo "Debug: Torrent selection done. Selected: $selected_torrent"
-
-echo "Debug: Script completed"
-=======
 # Variable to store Plex claim code
 plex_claim=""
 
@@ -263,4 +239,3 @@ for name in $selected_downloaders; do
 done
 
 whiptail --msgbox "All selected containers have been configured and started. Please check individual container logs for any issues." 8 78
->>>>>>> Stashed changes
