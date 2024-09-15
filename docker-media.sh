@@ -204,8 +204,14 @@ selected_media=$(whiptail --checklist --separate-output \
     "${media_options[@]}" \
     3>&1 1>&2 2>&3)
 
+# If no media applications were selected, inform the user and exit
+if [ -z "$selected_media" ]; then
+    whiptail --msgbox "No media applications were selected. Exiting." 8 78
+    exit 0
+fi
+
 # If Plex is selected, ask for claim code
-if [[ $selected_media == *"plex"* ]]; then
+if echo "$selected_media" | grep -q "plex"; then
     plex_claim=$(whiptail --inputbox "Enter your Plex claim code:" 8 78 --title "Plex Claim Code" 3>&1 1>&2 2>&3)
 fi
 
@@ -216,26 +222,41 @@ selected_downloaders=$(whiptail --checklist --separate-output \
     "${downloader_options[@]}" \
     3>&1 1>&2 2>&3)
 
-# Create configurations and start containers for selected media applications
-for name in $selected_media; do
-    for container in "${media_containers[@]}"; do
-        IFS=':' read -r cname port <<< "$container"
+# If no torrent downloaders were selected, inform the user
+if [ -z "$selected_downloaders" ]; then
+    whiptail --msgbox "No torrent downloaders were selected." 8 78
+fi
+
+# Function to get port for a given container name
+get_port() {
+    local name=$1
+    local port
+    for container in "${media_containers[@]}" "${torrent_downloaders[@]}"; do
+        IFS=':' read -r cname cport <<< "$container"
         if [[ "$name" == "$cname" ]]; then
-            create_config_and_start "$name" "$port"
+            port=$cport
             break
         fi
     done
+    echo $port
+}
+
+# Create configurations and start containers for selected media applications
+echo "Starting selected media applications..."
+echo "$selected_media" | while read -r name; do
+    if [ ! -z "$name" ]; then
+        port=$(get_port "$name")
+        create_config_and_start "$name" "$port"
+    fi
 done
 
 # Create configurations and start containers for selected torrent downloaders
-for name in $selected_downloaders; do
-    for downloader in "${torrent_downloaders[@]}"; do
-        IFS=':' read -r cname port <<< "$downloader"
-        if [[ "$name" == "$cname" ]]; then
-            create_config_and_start "$name" "$port"
-            break
-        fi
-    done
+echo "Starting selected torrent downloaders..."
+echo "$selected_downloaders" | while read -r name; do
+    if [ ! -z "$name" ]; then
+        port=$(get_port "$name")
+        create_config_and_start "$name" "$port"
+    fi
 done
 
 whiptail --msgbox "All selected containers have been configured and started. Please check individual container logs for any issues." 8 78
