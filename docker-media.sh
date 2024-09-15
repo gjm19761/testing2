@@ -198,10 +198,10 @@ appdata_dir="$HOME/appdata"
 create_directory "$appdata_dir"
 
 # Select media applications
-media_options=$(create_checklist "${media_containers[@]}")
+media_options=($(create_checklist "${media_containers[@]}"))
 selected_media=$(whiptail --checklist --separate-output \
     "Select media applications:" 20 78 10 \
-    ${media_options} \
+    "${media_options[@]}" \
     3>&1 1>&2 2>&3)
 
 # If Plex is selected, ask for claim code
@@ -210,10 +210,10 @@ if [[ $selected_media == *"plex"* ]]; then
 fi
 
 # Select torrent downloaders
-downloader_options=$(create_checklist "${torrent_downloaders[@]}")
+downloader_options=($(create_checklist "${torrent_downloaders[@]}"))
 selected_downloaders=$(whiptail --checklist --separate-output \
     "Select torrent downloaders:" 20 78 10 \
-    ${downloader_options} \
+    "${downloader_options[@]}" \
     3>&1 1>&2 2>&3)
 
 # Create configurations and start containers for selected media applications
