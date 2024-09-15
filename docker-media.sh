@@ -40,6 +40,43 @@ create_directory() {
     fi
 }
 
+# Function to select items from an array
+select_items() {
+    local title="$1"
+    shift
+    local array=("$@")
+    local selected=()
+    local choice
+
+    echo "$title"
+    echo "Enter the numbers of your choices (space-separated), 0 for none, or q to quit:"
+    echo "Available options:"
+    for i in "${!array[@]}"; do
+        echo "$((i+1)). ${array[$i]%%:*}"
+    done
+
+    while true; do
+        read -r choice
+        if [[ "$choice" == "q" ]]; then
+            echo "Exiting script."
+            exit 0
+        elif [[ "$choice" == "0" ]]; then
+            break
+        elif [[ "$choice" =~ ^[0-9]+( [0-9]+)*$ ]]; then
+            for num in $choice; do
+                if (( num > 0 && num <= ${#array[@]} )); then
+                    selected+=("${array[$((num-1))]}")
+                fi
+            done
+            break
+        else
+            echo "Invalid input. Please try again."
+        fi
+    done
+
+    echo "${selected[@]}"
+}
+
 # Ask user about shared directory
 read -p "Do you want to use a shared directory for media? (y/n): " use_shared_dir
 if [[ $use_shared_dir =~ ^[Yy]$ ]]; then
@@ -167,27 +204,25 @@ create_config_and_start() {
 }
 
 # Select media applications
-echo "Select media applications (space-separated list):"
-select media in "${media_containers[@]}"; do
-    [[ $media ]] && break
-done
+readarray -t selected_media < <(select_items "Select media applications:" "${media_containers[@]}")
 
 # Select torrent downloaders
-echo "Select torrent downloaders (space-separated list):"
-select downloader in "${torrent_downloaders[@]}"; do
-    [[ $downloader ]] && break
-done
+readarray -t selected_torrent < <(select_items "Select torrent downloaders:" "${torrent_downloaders[@]}")
 
 # Create configurations and start containers for selected media applications
-for container in $media; do
+for container in "${selected_media[@]}"; do
     IFS=':' read -r name port image <<< "$container"
     create_config_and_start "$name" "$port" "$image"
 done
 
 # Create configurations and start containers for selected torrent downloaders
-for downloader in $downloader; do
+for downloader in "${selected_torrent[@]}"; do
     IFS=':' read -r name port image <<< "$downloader"
     create_config_and_start "$name" "$port" "$image"
 done
 
-echo "All selected containers have been configured and started. Please check individual container logs for any issues."
+if [[ ${#selected_media[@]} -eq 0 && ${#selected_torrent[@]} -eq 0 ]]; then
+    echo "No applications were selected. Exiting."
+else
+    echo "All selected containers have been configured and started. Please check individual container logs for any issues."
+fi
