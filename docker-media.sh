@@ -1,19 +1,5 @@
 #!/bin/bash
 
-# Function to check if Docker is installed and install if not
-check_docker_install() {
-    if ! command -v docker &> /dev/null; then
-        echo "Docker is not installed. Installing Docker..."
-        curl -fsSL https://get.docker.com -o get-docker.sh
-        sudo sh get-docker.sh
-        sudo usermod -aG docker $USER
-        echo "Docker installed successfully. Please log out and log back in to use Docker without sudo."
-        exit 0
-    else
-        echo "Docker is already installed."
-    fi
-}
-
 # Function to create directory if it doesn't exist
 create_directory() {
     if [ ! -d "$1" ]; then
@@ -22,12 +8,10 @@ create_directory() {
     fi
 }
 
-# Check and install Docker
-check_docker_install
-
 # Ask user about shared directory
-if whiptail --yesno "Do you want to use a shared directory for media?" 8 78; then
-    shared_media_dir=$(whiptail --inputbox "Enter the path for the shared media directory:" 8 78 "/path/to/media" --title "Shared Media Directory" 3>&1 1>&2 2>&3)
+read -p "Do you want to use a shared directory for media? (y/n): " use_shared_dir
+if [[ $use_shared_dir =~ ^[Yy]$ ]]; then
+    read -p "Enter the path for the shared media directory: " shared_media_dir
     create_directory "$shared_media_dir"
     shared_volume_arg="-v $shared_media_dir:/media"
 else
@@ -55,141 +39,61 @@ torrent_downloaders=(
     "bittorrent:8080" "utorrent:8080" "tixati:8888" "webtorrent:8000"
 )
 
-# Create whiptail menu for media containers
-media_options=()
-for container in "${media_containers[@]}"; do
+# Function to create configuration file and start container
+create_config_and_start() {
+    local name=$1
+    local port=$2
+    local config_dir="$appdata_dir/$name"
+    create_directory "$config_dir"
+    
+    echo "Creating configuration for $name..."
+    cat > "$config_dir/docker-compose.yml" <<EOL
+version: '3'
+services:
+  $name:
+    image: linuxserver/$name
+    container_name: $name
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/London
+    volumes:
+      - $config_dir:/config
+      $shared_volume_arg
+    ports:
+      - $port:$port
+    restart: unless-stopped
+EOL
+    echo "Configuration created for $name in $config_dir/docker-compose.yml"
+    
+    echo "Starting $name container..."
+    (cd "$config_dir" && docker-compose up -d)
+}
+
+# Select media applications
+echo "Select media applications (space-separated list):"
+select media in "${media_containers[@]}"; do
+    [[ $media ]] && break
+done
+
+# Select torrent downloaders
+echo "Select torrent downloaders (space-separated list):"
+select downloader in "${torrent_downloaders[@]}"; do
+    [[ $downloader ]] && break
+done
+
+# Create configurations and start containers for selected media applications
+for container in $media; do
     IFS=':' read -r name port <<< "$container"
-    media_options+=("$name" "" OFF)
+    create_config_and_start "$name" "$port"
 done
 
-selected_media=$(whiptail --title "Select Media Applications" --checklist \
-"Choose the media applications you want to install:" 20 78 15 \
-"${media_options[@]}" \
-3>&1 1>&2 2>&3)
-
-# Create whiptail menu for torrent downloaders
-torrent_options=()
-for downloader in "${torrent_downloaders[@]}"; do
+# Create configurations and start containers for selected torrent downloaders
+for downloader in $downloader; do
     IFS=':' read -r name port <<< "$downloader"
-    torrent_options+=("$name" "" OFF)
+    create_config_and_start "$name" "$port"
 done
 
-selected_torrent=$(whiptail --title "Select Torrent Downloaders" --checklist \
-"Choose the torrent downloaders you want to install:" 20 78 10 \
-"${torrent_options[@]}" \
-3>&1 1>&2 2>&3)
-
-# Install selected media containers
-for container in $selected_media; do
-    echo "Installing $container..."
-    for item in "${media_containers[@]}"; do
-        IFS=':' read -r name port <<< "$item"
-        if [ "$name" == "$container" ]; then
-            config_dir="$appdata_dir/$container"
-            create_directory "$config_dir"
-            case $container in
-                "plex")
-                    docker run -d \
-                        --name=plex \
-                        --restart=unless-stopped \
-                        -v $config_dir:/config \
-                        $shared_volume_arg \
-                        -p $port:32400 \
-                        -e PLEX_CLAIM="claim-xxxxxxxxxxxxxxxxxxxx" \
-                        plexinc/pms-docker
-                    ;;
-                "emby")
-                    docker run -d \
-                        --name=emby \
-                        --restart=unless-stopped \
-                        -v $config_dir:/config \
-                        $shared_volume_arg \
-                        -p $port:8096 \
-                        emby/embyserver
-                    ;;
-                "jellyfin")
-                    docker run -d \
-                        --name=jellyfin \
-                        --restart=unless-stopped \
-                        -v $config_dir:/config \
-                        $shared_volume_arg \
-                        -p $port:8096 \
-                        jellyfin/jellyfin
-                    ;;
-                *)
-                    docker run -d \
-                        --name=$container \
-                        --restart=unless-stopped \
-                        -v $config_dir:/config \
-                        $shared_volume_arg \
-                        -p $port:$port \
-                        linuxserver/$container
-                    ;;
-            esac
-            break
-        fi
-    done
-done
-
-# Install selected torrent downloaders
-for downloader in $selected_torrent; do
-    echo "Installing $downloader..."
-    for item in "${torrent_downloaders[@]}"; do
-        IFS=':' read -r name port <<< "$item"
-        if [ "$name" == "$downloader" ]; then
-            config_dir="$appdata_dir/$downloader"
-            create_directory "$config_dir"
-            case $downloader in
-                "transmission")
-                    docker run -d \
-                        --name=transmission \
-                        --restart=unless-stopped \
-                        -v $config_dir:/config \
-                        $shared_volume_arg \
-                        -p $port:9091 \
-                        -p 51413:51413 \
-                        -p 51413:51413/udp \
-                        linuxserver/transmission
-                    ;;
-                "deluge")
-                    docker run -d \
-                        --name=deluge \
-                        --restart=unless-stopped \
-                        -v $config_dir:/config \
-                        $shared_volume_arg \
-                        -p $port:8112 \
-                        -p 58846:58846 \
-                        -p 58946:58946 \
-                        linuxserver/deluge
-                    ;;
-                "qbittorrent")
-                    docker run -d \
-                        --name=qbittorrent \
-                        --restart=unless-stopped \
-                        -v $config_dir:/config \
-                        $shared_volume_arg \
-                        -p $port:8080 \
-                        -p 6881:6881 \
-                        -p 6881:6881/udp \
-                        linuxserver/qbittorrent
-                    ;;
-                *)
-                    docker run -d \
-                        --name=$downloader \
-                        --restart=unless-stopped \
-                        -v $config_dir:/config \
-                        $shared_volume_arg \
-                        -p $port:$port \
-                        linuxserver/$downloader
-                    ;;
-            esac
-            break
-        fi
-    done
-done
-
-echo "Installation complete. Please check individual container logs for any issues."
-
-
+echo "All selected containers have been configured and started. Please check individual container logs for any issues."
 
 
