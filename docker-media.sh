@@ -39,35 +39,102 @@ torrent_downloaders=(
     "bittorrent:8080" "utorrent:8080" "tixati:8888" "webtorrent:8000"
 )
 
-# Function to create configuration file and start container
+# Function to create configuration and start container
 create_config_and_start() {
     local name=$1
     local port=$2
     local config_dir="$appdata_dir/$name"
     create_directory "$config_dir"
     
-    echo "Creating configuration for $name..."
-    cat > "$config_dir/docker-compose.yml" <<EOL
-version: '3'
-services:
-  $name:
-    image: linuxserver/$name
-    container_name: $name
-    environment:
-      - PUID=1000
-      - PGID=1000
-      - TZ=Europe/London
-    volumes:
-      - $config_dir:/config
-      $shared_volume_arg
-    ports:
-      - $port:$port
-    restart: unless-stopped
-EOL
-    echo "Configuration created for $name in $config_dir/docker-compose.yml"
-    
     echo "Starting $name container..."
-    (cd "$config_dir" && docker-compose up -d)
+    case $name in
+        plex)
+            docker run -d \
+                --name=$name \
+                --restart=unless-stopped \
+                -p $port:32400 \
+                -e TZ="Europe/London" \
+                -e PLEX_CLAIM="claim-xxxxxxxxxxxxxxxxxxxx" \
+                -v $config_dir:/config \
+                $shared_volume_arg \
+                plexinc/pms-docker
+            ;;
+        emby)
+            docker run -d \
+                --name=$name \
+                --restart=unless-stopped \
+                -p $port:8096 \
+                -e TZ="Europe/London" \
+                -v $config_dir:/config \
+                $shared_volume_arg \
+                emby/embyserver
+            ;;
+        jellyfin)
+            docker run -d \
+                --name=$name \
+                --restart=unless-stopped \
+                -p $port:8096 \
+                -e TZ="Europe/London" \
+                -v $config_dir:/config \
+                $shared_volume_arg \
+                jellyfin/jellyfin
+            ;;
+        transmission)
+            docker run -d \
+                --name=$name \
+                --restart=unless-stopped \
+                -p $port:9091 \
+                -p 51413:51413 \
+                -p 51413:51413/udp \
+                -e TZ="Europe/London" \
+                -e PUID=1000 \
+                -e PGID=1000 \
+                -v $config_dir:/config \
+                $shared_volume_arg \
+                linuxserver/transmission
+            ;;
+        deluge)
+            docker run -d \
+                --name=$name \
+                --restart=unless-stopped \
+                -p $port:8112 \
+                -p 58846:58846 \
+                -p 58946:58946 \
+                -e TZ="Europe/London" \
+                -e PUID=1000 \
+                -e PGID=1000 \
+                -v $config_dir:/config \
+                $shared_volume_arg \
+                linuxserver/deluge
+            ;;
+        qbittorrent)
+            docker run -d \
+                --name=$name \
+                --restart=unless-stopped \
+                -p $port:8080 \
+                -p 6881:6881 \
+                -p 6881:6881/udp \
+                -e TZ="Europe/London" \
+                -e PUID=1000 \
+                -e PGID=1000 \
+                -v $config_dir:/config \
+                $shared_volume_arg \
+                linuxserver/qbittorrent
+            ;;
+        *)
+            docker run -d \
+                --name=$name \
+                --restart=unless-stopped \
+                -p $port:$port \
+                -e TZ="Europe/London" \
+                -e PUID=1000 \
+                -e PGID=1000 \
+                -v $config_dir:/config \
+                $shared_volume_arg \
+                linuxserver/$name
+            ;;
+    esac
+    echo "$name container started."
 }
 
 # Select media applications
@@ -95,5 +162,3 @@ for downloader in $downloader; do
 done
 
 echo "All selected containers have been configured and started. Please check individual container logs for any issues."
-
-
