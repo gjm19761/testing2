@@ -54,104 +54,100 @@ fi
 appdata_dir="$HOME/appdata"
 create_directory "$appdata_dir"
 
-# Arrays of media containers and torrent downloaders
+# Arrays of media containers and torrent downloaders with their correct repositories
 media_containers=(
-    "plex:32400" "emby:8096" "jellyfin:8920" "kodi:8080" "airsonic:4040" "beets:8337" "calibre-web:8083" 
-    "deemix:6595" "dizquetv:8000" "filebrowser:8090" "freshrss:8081" "grocy:8082" "headphones:8181" 
-    "heimdall:8085" "jackett:9117" "jellyseerr:5055" "kavita:5000" "komga:8086" "lazylibrarian:5299" 
-    "lidarr:8686" "lychee:8087" "mediaelch:8088" "medusa:8081" "mstream:3000" "mylar3:8090" 
-    "navidrome:4533" "nzbget:6789" "nzbhydra2:5076" "ombi:3579" "organizr:8089" "photoprism:2342" 
-    "photoview:8091" "piwigo:8092" "prowlarr:9696" "radarr:7878" "readarr:8787" "requestrr:4545" 
-    "sickchill:8081" "sonarr:8989" "stash:9999" "tautulli:8181" "transmission:9091" "ubooquity:2202" 
-    "unmanic:8888" "watchtower:8093" "yacht:8094" "yourls:8095" "znc:6697" "airsonic-advanced:4040" "bazarr:6767"
+    "plex:32400:plexinc/pms-docker"
+    "emby:8096:emby/embyserver"
+    "jellyfin:8920:jellyfin/jellyfin"
+    "airsonic:4040:airsonic/airsonic"
+    "beets:8337:linuxserver/beets"
+    "calibre-web:8083:linuxserver/calibre-web"
+    "deemix:6595:registry.gitlab.com/bockiii/deemix-docker"
+    "dizquetv:8000:vexorian/dizquetv"
+    "filebrowser:8090:filebrowser/filebrowser"
+    "freshrss:8081:linuxserver/freshrss"
+    "grocy:8082:linuxserver/grocy"
+    "headphones:8181:linuxserver/headphones"
+    "heimdall:8085:linuxserver/heimdall"
+    "jackett:9117:linuxserver/jackett"
+    "jellyseerr:5055:fallenbagel/jellyseerr"
+    "kavita:5000:kizaing/kavita"
+    "komga:8086:gotson/komga"
+    "lazylibrarian:5299:linuxserver/lazylibrarian"
+    "lidarr:8686:linuxserver/lidarr"
+    "lychee:8087:linuxserver/lychee"
+    "mediaelch:8088:koenkk/mediaelch"
+    "medusa:8081:linuxserver/medusa"
+    "mstream:3000:linuxserver/mstream"
+    "mylar3:8090:linuxserver/mylar3"
+    "navidrome:4533:deluan/navidrome"
+    "nzbget:6789:linuxserver/nzbget"
+    "nzbhydra2:5076:linuxserver/nzbhydra2"
+    "ombi:3579:linuxserver/ombi"
+    "organizr:8089:organizr/organizr"
+    "photoprism:2342:photoprism/photoprism"
+    "photoview:8091:viktorstrate/photoview"
+    "piwigo:8092:linuxserver/piwigo"
+    "prowlarr:9696:linuxserver/prowlarr"
+    "radarr:7878:linuxserver/radarr"
+    "readarr:8787:linuxserver/readarr"
+    "requestrr:4545:darkalfx/requestrr"
+    "sickchill:8081:linuxserver/sickchill"
+    "sonarr:8989:linuxserver/sonarr"
+    "stash:9999:stashapp/stash"
+    "tautulli:8181:tautulli/tautulli"
+    "ubooquity:2202:linuxserver/ubooquity"
+    "unmanic:8888:josh5/unmanic"
+    "watchtower:8093:containrrr/watchtower"
+    "yacht:8094:selfhostedpro/yacht"
+    "yourls:8095:yourls/yourls"
+    "znc:6697:linuxserver/znc"
+    "airsonic-advanced:4040:airsonic/airsonic-advanced"
+    "bazarr:6767:linuxserver/bazarr"
 )
 
 torrent_downloaders=(
-    "transmission:9091" "deluge:8112" "qbittorrent:8080" "rtorrent:5000" "aria2:6800" "vuze:9091" 
-    "bittorrent:8080" "utorrent:8080" "tixati:8888" "webtorrent:8000"
+    "rtorrent-rutorrent:8080:diameter/rtorrent-rutorrent:latest"
+    "deluge:8112:linuxserver/deluge"
+    "qbittorrent:8080:linuxserver/qbittorrent"
+    "aria2:6800:p3terx/aria2-pro"
 )
 
 # Function to create configuration and start container
 create_config_and_start() {
     local name=$1
     local port=$2
+    local image=$3
     local config_dir="$appdata_dir/$name"
     create_directory "$config_dir"
     
     echo "Starting $name container..."
     case $name in
         plex)
+            read -p "Enter your Plex claim code (get it from https://www.plex.tv/claim): " plex_claim
             docker run -d \
                 --name=$name \
                 --restart=unless-stopped \
                 -p $port:32400 \
                 -e TZ="Europe/London" \
-                -e PLEX_CLAIM="claim-xxxxxxxxxxxxxxxxxxxx" \
+                -e PLEX_CLAIM="$plex_claim" \
                 -v $config_dir:/config \
                 $shared_volume_arg \
-                plexinc/pms-docker
+                $image
             ;;
-        emby)
+        rtorrent-rutorrent)
             docker run -d \
                 --name=$name \
                 --restart=unless-stopped \
-                -p $port:8096 \
+                -p $port:80 \
+                -p 49160:49160/udp \
+                -p 49161:49161 \
                 -e TZ="Europe/London" \
-                -v $config_dir:/config \
+                -e USR_ID=1000 \
+                -e GRP_ID=1000 \
+                -v $config_dir:/downloads \
                 $shared_volume_arg \
-                emby/embyserver
-            ;;
-        jellyfin)
-            docker run -d \
-                --name=$name \
-                --restart=unless-stopped \
-                -p $port:8096 \
-                -e TZ="Europe/London" \
-                -v $config_dir:/config \
-                $shared_volume_arg \
-                jellyfin/jellyfin
-            ;;
-        transmission)
-            docker run -d \
-                --name=$name \
-                --restart=unless-stopped \
-                -p $port:9091 \
-                -p 51413:51413 \
-                -p 51413:51413/udp \
-                -e TZ="Europe/London" \
-                -e PUID=1000 \
-                -e PGID=1000 \
-                -v $config_dir:/config \
-                $shared_volume_arg \
-                linuxserver/transmission
-            ;;
-        deluge)
-            docker run -d \
-                --name=$name \
-                --restart=unless-stopped \
-                -p $port:8112 \
-                -p 58846:58846 \
-                -p 58946:58946 \
-                -e TZ="Europe/London" \
-                -e PUID=1000 \
-                -e PGID=1000 \
-                -v $config_dir:/config \
-                $shared_volume_arg \
-                linuxserver/deluge
-            ;;
-        qbittorrent)
-            docker run -d \
-                --name=$name \
-                --restart=unless-stopped \
-                -p $port:8080 \
-                -p 6881:6881 \
-                -p 6881:6881/udp \
-                -e TZ="Europe/London" \
-                -e PUID=1000 \
-                -e PGID=1000 \
-                -v $config_dir:/config \
-                $shared_volume_arg \
-                linuxserver/qbittorrent
+                $image
             ;;
         *)
             docker run -d \
@@ -163,9 +159,10 @@ create_config_and_start() {
                 -e PGID=1000 \
                 -v $config_dir:/config \
                 $shared_volume_arg \
-                linuxserver/$name
+                $image
             ;;
     esac
+    
     echo "$name container started."
 }
 
@@ -183,14 +180,14 @@ done
 
 # Create configurations and start containers for selected media applications
 for container in $media; do
-    IFS=':' read -r name port <<< "$container"
-    create_config_and_start "$name" "$port"
+    IFS=':' read -r name port image <<< "$container"
+    create_config_and_start "$name" "$port" "$image"
 done
 
 # Create configurations and start containers for selected torrent downloaders
 for downloader in $downloader; do
-    IFS=':' read -r name port <<< "$downloader"
-    create_config_and_start "$name" "$port"
+    IFS=':' read -r name port image <<< "$downloader"
+    create_config_and_start "$name" "$port" "$image"
 done
 
 echo "All selected containers have been configured and started. Please check individual container logs for any issues."
