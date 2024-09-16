@@ -1,25 +1,23 @@
 #!/bin/bash
 
-# Function to display the ASCII art numbers horizontally
-display_number() {
+# Function to display a single digit
+display_digit() {
     local n=$1
-    local lines=()
     case $n in
-        0) lines=("  ████████  " "██        ██" "██        ██" "██        ██" "██        ██" "██        ██" "  ████████  ");;
-        1) lines=("     ██     " "   ████     " "     ██     " "     ██     " "     ██     " "     ██     " "   ██████   ");;
-        2) lines=(" ██████████ " "         ██ " "         ██ " " ██████████ " "██          " "██          " " ██████████ ");;
-        3) lines=(" ██████████ " "         ██ " "         ██ " "   ██████   " "         ██ " "         ██ " " ██████████ ");;
-        4) lines=("██      ██  " "██      ██  " "██      ██  " " ██████████ " "        ██  " "        ██  " "        ██  ");;
-        5) lines=(" ██████████ " "██          " "██          " " ██████████ " "         ██ " "         ██ " " ██████████ ");;
-        6) lines=(" ██████████ " "██          " "██          " " ██████████ " "██        ██" "██        ██" " ██████████ ");;
-        7) lines=(" ██████████ " "         ██ " "        ██  " "       ██   " "      ██    " "     ██     " "    ██      ");;
-        8) lines=(" ██████████ " "██        ██" "██        ██" " ██████████ " "██        ██" "██        ██" " ██████████ ");;
-        9) lines=(" ██████████ " "██        ██" "██        ██" " ██████████ " "         ██ " "         ██ " " ██████████ ");;
+        0) echo " ███ ";echo "█   █";echo "█   █";echo "█   █";echo " ███ ";;
+        1) echo "  █  ";echo " ██  ";echo "  █  ";echo "  █  ";echo " ███ ";;
+        2) echo " ███ ";echo "    █";echo " ███ ";echo "█    ";echo " ███ ";;
+        3) echo " ███ ";echo "    █";echo " ███ ";echo "    █";echo " ███ ";;
+        4) echo "█   █";echo "█   █";echo " ████";echo "    █";echo "    █";;
+        5) echo " ███ ";echo "█    ";echo " ███ ";echo "    █";echo " ███ ";;
+        6) echo " ███ ";echo "█    ";echo " ███ ";echo "█   █";echo " ███ ";;
+        7) echo " ███ ";echo "    █";echo "   █ ";echo "  █  ";echo " █   ";;
+        8) echo " ███ ";echo "█   █";echo " ███ ";echo "█   █";echo " ███ ";;
+        9) echo " ███ ";echo "█   █";echo " ███ ";echo "    █";echo " ███ ";;
     esac
-    echo "${lines[@]}"
 }
 
-# Function to display the timer horizontally
+# Function to display the timer
 display_timer() {
     local minutes=$1
     local seconds=$2
@@ -28,33 +26,27 @@ display_timer() {
 
     clear
 
-    local timer_width=68  # 4 numbers * 13 width + 4 spaces + 12 for colon
-    local start_col=$(( (term_width - timer_width) / 2 ))
-    local start_row=$(( (term_height - 7) / 2 ))
+    # Calculate start position
+    local start_row=$(( (term_height - 5) / 2 ))
+    local start_col=$(( (term_width - 29) / 2 ))  # 29 = 4 digits * 6 width + 5 spaces
 
-    # Move cursor to the starting position
-    tput cup $start_row 0
-
-    # Display the timer
-    for i in {0..6}; do
-        printf "%${start_col}s" ""  # Padding
-        IFS=' ' read -ra num1 <<< "$(display_number $((minutes/10)))"
-        IFS=' ' read -ra num2 <<< "$(display_number $((minutes%10)))"
-        IFS=' ' read -ra num3 <<< "$(display_number $((seconds/10)))"
-        IFS=' ' read -ra num4 <<< "$(display_number $((seconds%10)))"
-        
-        echo -n "${num1[$i]} ${num2[$i]} "
-        
-        if [ $i -eq 2 ] || [ $i -eq 4 ]; then
-            echo -n "██ "
-        else
-            echo -n "   "
-        fi
-        
-        echo "${num3[$i]} ${num4[$i]}"
+    # Display timer
+    for i in {0..4}; do
+        tput cup $((start_row + i)) $start_col
+        m1=$(display_digit $((minutes/10)) | sed -n "$((i+1))p")
+        m2=$(display_digit $((minutes%10)) | sed -n "$((i+1))p")
+        s1=$(display_digit $((seconds/10)) | sed -n "$((i+1))p")
+        s2=$(display_digit $((seconds%10)) | sed -n "$((i+1))p")
+        echo -n "$m1 $m2  $s1 $s2"
     done
 
-    # Move cursor to the bottom of the screen
+    # Display colon
+    tput cup $((start_row + 1)) $((start_col + 11))
+    echo "*"
+    tput cup $((start_row + 3)) $((start_col + 11))
+    echo "*"
+
+    # Move cursor to bottom of screen
     tput cup $((term_height-1)) 0
 }
 
