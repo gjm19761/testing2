@@ -1,4 +1,12 @@
 #!/bin/bash
+#by tech logicals
+# Check if jq is installed
+if ! command -v jq &> /dev/null; then
+    echo "jq is not installed. Please install it to run this script."
+    echo "On Ubuntu or Debian, you can install it with: sudo apt-get install jq"
+    echo "On macOS with Homebrew, use: brew install jq"
+    exit 1
+fi
 
 # Array of scary ASCII art
 declare -a scary_ascii=(
@@ -147,12 +155,12 @@ number_to_ascii() {
     echo -e "${ascii_numbers[$num]}"
 }
 
-# Function to display "/20" in ASCII art
-display_slash_20() {
-    echo " ____   ___  "
-    echo "/_  /  / _ \ "
-    echo " / /  / // / "
-    echo "/_/   \___/  "
+# Function to display "20" in ASCII art
+display_20() {
+    echo " ___   ___  "
+    echo "|_  ) / _ \ "
+    echo " / / / // / "
+    echo "/___| \___/ "
 }
 
 # Function to create scary percentage ASCII art
@@ -248,7 +256,10 @@ if ((score < 10)); then
 fi
 number_to_ascii $((score / 10))
 number_to_ascii $((score % 10))
-display_slash_20
+echo
+echo "of"
+echo
+display_20
 echo
 scary_percentage $percentage
 
