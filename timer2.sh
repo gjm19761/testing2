@@ -4,16 +4,16 @@
 display_digit() {
     local n=$1
     case $n in
-        0) echo " ███ ";echo "█   █";echo "█   █";echo "█   █";echo " ███ ";;
-        1) echo "  █  ";echo " ██  ";echo "  █  ";echo "  █  ";echo " ███ ";;
-        2) echo " ███ ";echo "    █";echo " ███ ";echo "█    ";echo " ███ ";;
-        3) echo " ███ ";echo "    █";echo " ███ ";echo "    █";echo " ███ ";;
-        4) echo "█   █";echo "█   █";echo " ████";echo "    █";echo "    █";;
-        5) echo " ███ ";echo "█    ";echo " ███ ";echo "    █";echo " ███ ";;
-        6) echo " ███ ";echo "█    ";echo " ███ ";echo "█   █";echo " ███ ";;
-        7) echo " ███ ";echo "    █";echo "   █ ";echo "  █  ";echo " █   ";;
-        8) echo " ███ ";echo "█   █";echo " ███ ";echo "█   █";echo " ███ ";;
-        9) echo " ███ ";echo "█   █";echo " ███ ";echo "    █";echo " ███ ";;
+        0) echo "  █████  ";echo " ██   ██ ";echo "██     ██";echo "██     ██";echo "██     ██";echo " ██   ██ ";echo "  █████  ";;
+        1) echo "   ██   ";echo " ███   ";echo "  ██   ";echo "  ██   ";echo "  ██   ";echo "  ██   ";echo "██████ ";;
+        2) echo " ██████  ";echo "██    ██ ";echo "     ██  ";echo "   ██    ";echo " ██      ";echo "██       ";echo "████████ ";;
+        3) echo " ██████  ";echo "██    ██ ";echo "      ██ ";echo "   ████  ";echo "      ██ ";echo "██    ██ ";echo " ██████  ";;
+        4) echo "██   ██ ";echo "██   ██ ";echo "██   ██ ";echo "██████  ";echo "    ██  ";echo "    ██  ";echo "    ██  ";;
+        5) echo "███████ ";echo "██      ";echo "██      ";echo "███████ ";echo "     ██ ";echo "██   ██ ";echo " █████  ";;
+        6) echo " ██████  ";echo "██       ";echo "██       ";echo "███████  ";echo "██    ██ ";echo "██    ██ ";echo " ██████  ";;
+        7) echo "███████ ";echo "     ██ ";echo "    ██  ";echo "   ██   ";echo "  ██    ";echo " ██     ";echo "██      ";;
+        8) echo " ██████  ";echo "██    ██ ";echo "██    ██ ";echo " ██████  ";echo "██    ██ ";echo "██    ██ ";echo " ██████  ";;
+        9) echo " ██████  ";echo "██    ██ ";echo "██    ██ ";echo " ███████ ";echo "      ██ ";echo "██    ██ ";echo " ██████  ";;
     esac
 }
 
@@ -27,11 +27,11 @@ display_timer() {
     clear
 
     # Calculate start position
-    local start_row=$(( (term_height - 5) / 2 ))
-    local start_col=$(( (term_width - 29) / 2 ))  # 29 = 4 digits * 6 width + 5 spaces
+    local start_row=$(( (term_height - 7) / 2 ))
+    local start_col=$(( (term_width - 41) / 2 ))  # 41 = 4 digits * 9 width + 5 spaces
 
     # Display timer
-    for i in {0..4}; do
+    for i in {0..6}; do
         tput cup $((start_row + i)) $start_col
         m1=$(display_digit $((minutes/10)) | sed -n "$((i+1))p")
         m2=$(display_digit $((minutes%10)) | sed -n "$((i+1))p")
@@ -41,10 +41,10 @@ display_timer() {
     done
 
     # Display colon
-    tput cup $((start_row + 1)) $((start_col + 11))
-    echo "*"
-    tput cup $((start_row + 3)) $((start_col + 11))
-    echo "*"
+    tput cup $((start_row + 2)) $((start_col + 19))
+    echo "██"
+    tput cup $((start_row + 4)) $((start_col + 19))
+    echo "██"
 
     # Move cursor to bottom of screen
     tput cup $((term_height-1)) 0
