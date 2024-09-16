@@ -249,7 +249,6 @@ EOL
 # Function to display menu and get user selection
 display_menu() {
     echo "Debug: display_menu function started with $# arguments"
-    echo "Debug: Entered display_menu function"
     local title="$1"
     shift
     local options=("$@")
@@ -299,6 +298,11 @@ display_menu() {
     for index in "${selected[@]}"; do
         echo "${options[$index]}"
     done
+
+    # Return selected options
+    for index in "${selected[@]}"; do
+        echo "${options[$index]}"
+    done
 }
 
 # Function to ask yes/no question
@@ -344,10 +348,8 @@ echo "Debug: media_names array:"
 printf '%s\n' "${media_names[@]}"
 echo "Debug: About to call display_menu function"
 echo "Debug: Number of media_names: ${#media_names[@]}"
-echo "Debug: Calling display_menu function directly"
-display_menu "Select Media Applications" "${media_names[@]}"
+selected_media=$(display_menu "Select Media Applications" "${media_names[@]}")
 echo "Debug: display_menu function call completed"
-selected_media=""
 echo "Debug: Selected media: $selected_media"
 
 # If no media applications were selected, inform the user and exit
