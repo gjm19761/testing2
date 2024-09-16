@@ -254,9 +254,11 @@ display_menu() {
     local options=("$@")
     local selected=()
     
+    echo "Debug: Title: $title"
+    echo "Debug: Number of options: ${#options[@]}"
+    
     while true; do
         echo "Debug: Entered main loop in display_menu"
-        clear
         echo "$title"
         echo "------------------------"
         for i in "${!options[@]}"; do
@@ -269,17 +271,22 @@ display_menu() {
         echo "------------------------"
         echo "Enter the number to select/deselect an option, 'done' to finish, or 'quit' to exit:"
         read -r choice
+        echo "Debug: User input: $choice"
         
         if [[ "$choice" == "done" ]]; then
+            echo "Debug: Selection completed"
             break
         elif [[ "$choice" == "quit" ]]; then
+            echo "Debug: User chose to quit"
             exit 0
         elif [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le "${#options[@]}" ]; then
             index=$((choice-1))
             if [[ " ${selected[*]} " =~ " $index " ]]; then
                 selected=(${selected[@]/$index})
+                echo "Debug: Deselected option $choice"
             else
                 selected+=("$index")
+                echo "Debug: Selected option $choice"
             fi
         else
             echo "Invalid option. Please try again."
@@ -287,6 +294,7 @@ display_menu() {
         fi
     done
     
+    echo "Debug: Final selections:"
     for index in "${selected[@]}"; do
         echo "${options[$index]}"
     done
