@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -e  # Exit immediately if a command exits with a non-zero status.
+
 # Function to check if a command exists
 command_exists() {
     command -v "$1" >/dev/null 2>&1
@@ -246,12 +248,14 @@ EOL
 
 # Function to display menu and get user selection
 display_menu() {
+    echo "Debug: Entered display_menu function"
     local title="$1"
     shift
     local options=("$@")
     local selected=()
     
     while true; do
+        echo "Debug: Entered main loop in display_menu"
         clear
         echo "$title"
         echo "------------------------"
@@ -325,7 +329,10 @@ create_directory "$appdata_dir"
 echo "Debug: Appdata directory: $appdata_dir"
 
 # Select media applications
+echo "Debug: About to display media applications menu"
 media_names=($(printf "%s\n" "${media_containers[@]}" | cut -d':' -f1))
+echo "Debug: media_names array:"
+printf '%s\n' "${media_names[@]}"
 selected_media=$(display_menu "Select Media Applications" "${media_names[@]}")
 
 echo "Debug: Selected media: $selected_media"
