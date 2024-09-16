@@ -177,7 +177,14 @@ for ((i = 0; i < 20; i++)); do
     echo
 
     # Get user's answer
-    read -p "Enter your answer (1-4): " user_answer
+    while true; do
+        read -p "Enter your answer (1-4): " user_answer
+        if [[ "$user_answer" =~ ^[1-4]$ ]]; then
+            break
+        else
+            echo "Invalid input. Please enter a number between 1 and 4."
+        fi
+    done
 
     # Check if the answer is correct
     if [[ "${answers[$((user_answer-1))]}" == "$correct_answer" ]]; then
