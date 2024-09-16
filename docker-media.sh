@@ -14,18 +14,19 @@ display_menu() {
     echo "Debug: Title: $title" >&2
     echo "Debug: Number of options: ${#options[@]}" >&2
     
+    echo "Debug: About to enter while loop" >&2
     while true; do
+        echo "Debug: Top of while loop" >&2
         echo "$title"
         echo "------------------------"
+        echo "Debug: About to list options" >&2
         for i in "${!options[@]}"; do
-            if [[ " ${selected[*]} " =~ " $i " ]]; then
-                echo "[X] $((i+1)). ${options[$i]}"
-            else
-                echo "[ ] $((i+1)). ${options[$i]}"
-            fi
+            echo "Debug: Processing option $i" >&2
+            echo "[ ] $((i+1)). ${options[$i]}"
         done
         echo "------------------------"
-        echo "Enter the number to select/deselect an option, 'done' to finish, or 'quit' to exit:"
+        echo "Enter 'done' to finish, or 'quit' to exit:"
+        echo "Debug: About to read user input" >&2
         read -r choice
         echo "Debug: User input: $choice" >&2
         
@@ -35,32 +36,22 @@ display_menu() {
         elif [[ "$choice" == "quit" ]]; then
             echo "Debug: User chose to quit" >&2
             exit 0
-        elif [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le "${#options[@]}" ]; then
-            index=$((choice-1))
-            if [[ " ${selected[*]} " =~ " $index " ]]; then
-                selected=(${selected[@]/$index})
-                echo "Debug: Deselected option $choice" >&2
-            else
-                selected+=("$index")
-                echo "Debug: Selected option $choice" >&2
-            fi
         else
             echo "Invalid option. Please try again."
             sleep 1
         fi
     done
     
-    # Return selected options
-    for index in "${selected[@]}"; do
-        echo "${options[$index]}"
-    done
+    echo "Debug: Exited while loop" >&2
+    
+    # For testing, just return the first option
+    echo "${options[0]}"
 }
 
 echo "Debug: Before media_names array"
 
 media_names=(
     "plex" "emby" "jellyfin" "kodi" "airsonic"
-    "beets" "calibre-web" "deemix" "dizquetv" "filebrowser"
 )
 
 echo "Debug: After media_names array"
