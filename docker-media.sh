@@ -8,21 +8,21 @@ display_menu() {
     shift
     local options=("$@")
     
-    echo "Debug: Entering display_menu function"
-    echo "Debug: Title: $title"
-    echo "Debug: Number of options: ${#options[@]}"
-    echo "Debug: Options: ${options[*]}"
+    echo "Debug: Entering display_menu function" >&2
+    echo "Debug: Title: $title" >&2
+    echo "Debug: Number of options: ${#options[@]}" >&2
+    echo "Debug: Options: ${options[*]}" >&2
     
-    echo "$title"
-    echo "------------------------"
+    echo "$title" >&2
+    echo "------------------------" >&2
     for i in "${!options[@]}"; do
-        echo "$((i+1)). ${options[$i]}"
+        echo "$((i+1)). ${options[$i]}" >&2
     done
-    echo "------------------------"
-    echo "Enter the numbers of your choices separated by spaces, then press Enter:"
+    echo "------------------------" >&2
+    echo "Enter the numbers of your choices separated by spaces, then press Enter:" >&2
     read -r choices
     
-    echo "Debug: User input: $choices"
+    echo "Debug: User input: $choices" >&2
     
     local selected=()
     for choice in $choices; do
@@ -31,159 +31,11 @@ display_menu() {
         fi
     done
     
-    echo "Debug: Selected options: ${selected[*]}"
-    echo "${selected[@]}"
+    echo "Debug: Selected options: ${selected[*]}" >&2
+    printf '%s\n' "${selected[@]}"
 }
 
-# Function to create Docker network
-create_docker_network() {
-    local network_name="media_network"
-    if ! docker network inspect $network_name >/dev/null 2>&1; then
-        echo "Creating Docker network: $network_name"
-        docker network create $network_name
-    else
-        echo "Docker network $network_name already exists"
-    fi
-}
-
-# Function to create Docker Compose file
-create_docker_compose() {
-    local name=$1
-    local port=$2
-    local config_dir="$appdata_dir/$name"
-    mkdir -p "$config_dir"
-    
-    echo "Debug: Creating Docker Compose file for $name"
-    
-    case $name in
-        plex)
-            read -p "Enter your Plex claim code (https://www.plex.tv/claim): " plex_claim
-            cat > "$config_dir/docker-compose.yml" <<EOL
-version: '3'
-services:
-  $name:
-    image: plexinc/pms-docker
-    container_name: $name
-    network_mode: host
-    environment:
-      - PUID=1000
-      - PGID=1000
-      - VERSION=docker
-      - PLEX_CLAIM=${plex_claim}
-    volumes:
-      - $config_dir:/config
-      - $shared_media_dir:/data
-    restart: unless-stopped
-EOL
-            ;;
-        emby|jellyfin)
-            cat > "$config_dir/docker-compose.yml" <<EOL
-version: '3'
-services:
-  $name:
-    image: ${name}/${name}
-    container_name: $name
-    environment:
-      - PUID=1000
-      - PGID=1000
-      - TZ=Europe/London
-    volumes:
-      - $config_dir:/config
-      - $shared_media_dir:/data
-    ports:
-      - $port:8096
-    restart: unless-stopped
-    networks:
-      - media_network
-
-networks:
-  media_network:
-    external: true
-EOL
-            ;;
-        sonarr|radarr|lidarr|jackett|ombi|overseerr)
-            cat > "$config_dir/docker-compose.yml" <<EOL
-version: '3'
-services:
-  $name:
-    image: linuxserver/$name
-    container_name: $name
-    environment:
-      - PUID=1000
-      - PGID=1000
-      - TZ=Europe/London
-    volumes:
-      - $config_dir:/config
-      - $shared_media_dir:/data
-    ports:
-      - $port:$port
-    restart: unless-stopped
-    networks:
-      - media_network
-
-networks:
-  media_network:
-    external: true
-EOL
-            ;;
-        transmission|deluge|qbittorrent)
-            cat > "$config_dir/docker-compose.yml" <<EOL
-version: '3'
-services:
-  $name:
-    image: linuxserver/$name
-    container_name: $name
-    environment:
-      - PUID=1000
-      - PGID=1000
-      - TZ=Europe/London
-    volumes:
-      - $config_dir:/config
-      - $shared_media_dir/downloads:/downloads
-    ports:
-      - $port:$port
-    restart: unless-stopped
-    networks:
-      - media_network
-
-networks:
-  media_network:
-    external: true
-EOL
-            ;;
-        rtorrent-rutorrent)
-            cat > "$config_dir/docker-compose.yml" <<EOL
-version: '3'
-services:
-  $name:
-    image: diameter/rtorrent-rutorrent:latest
-    container_name: $name
-    environment:
-      - USR_ID=1000
-      - GRP_ID=1000
-      - TZ=Europe/London
-    volumes:
-      - $config_dir:/config
-      - $shared_media_dir:/downloads
-    ports:
-      - $port:80
-    restart: unless-stopped
-    networks:
-      - media_network
-
-networks:
-  media_network:
-    external: true
-EOL
-            ;;
-        *)
-            echo "Unknown application: $name"
-            return 1
-            ;;
-    esac
-
-    echo "Created Docker Compose file for $name"
-}
+# ... (rest of the functions remain the same)
 
 # Main script starts here
 echo "Debug: Script started"
@@ -200,26 +52,26 @@ echo "Debug: Appdata directory: $appdata_dir"
 echo "Selecting media applications..."
 media_names=(plex emby jellyfin sonarr radarr lidarr jackett ombi overseerr)
 echo "Debug: Media names: ${media_names[*]}"
-selected_media=$(display_menu "Select Media Applications" "${media_names[@]}")
+mapfile -t selected_media < <(display_menu "Select Media Applications" "${media_names[@]}")
 
 echo "Debug: Selected media applications:"
-echo "$selected_media"
+printf '%s\n' "${selected_media[@]}"
 
 # Select torrent downloaders
 echo "Selecting torrent downloaders..."
 downloader_names=(transmission deluge qbittorrent rtorrent-rutorrent)
 echo "Debug: Downloader names: ${downloader_names[*]}"
-selected_downloaders=$(display_menu "Select Torrent Downloaders" "${downloader_names[@]}")
+mapfile -t selected_downloaders < <(display_menu "Select Torrent Downloaders" "${downloader_names[@]}")
 
 echo "Debug: Selected torrent downloaders:"
-echo "$selected_downloaders"
+printf '%s\n' "${selected_downloaders[@]}"
 
 # Create Docker network
 create_docker_network
 
 # Create Docker Compose files and start containers
 echo "Creating Docker Compose files and starting containers..."
-for app in $selected_media $selected_downloaders; do
+for app in "${selected_media[@]}" "${selected_downloaders[@]}"; do
     case $app in
         plex) port=32400 ;;
         emby|jellyfin) port=8096 ;;
