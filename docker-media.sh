@@ -10,17 +10,17 @@ display_menu() {
     local selected=()
     
     while true; do
-        echo "$title" >&2
-        echo "------------------------" >&2
+        echo "$title"
+        echo "------------------------"
         for i in "${!options[@]}"; do
             if [[ " ${selected[*]} " =~ " $i " ]]; then
-                echo "[X] $((i+1)). ${options[$i]}" >&2
+                echo "[X] $((i+1)). ${options[$i]}"
             else
-                echo "[ ] $((i+1)). ${options[$i]}" >&2
+                echo "[ ] $((i+1)). ${options[$i]}"
             fi
         done
-        echo "------------------------" >&2
-        echo "Enter a number to select/deselect, 'done' to finish, or 'quit' to exit:" >&2
+        echo "------------------------"
+        echo "Enter a number to select/deselect, 'done' to finish, or 'quit' to exit:"
         read -r choice
         
         if [ "$choice" = "done" ]; then
@@ -31,13 +31,13 @@ display_menu() {
             index=$((choice-1))
             if [[ " ${selected[*]} " =~ " $index " ]]; then
                 selected=(${selected[@]/$index})
-                echo "Deselected ${options[$index]}" >&2
+                echo "Deselected ${options[$index]}"
             else
                 selected+=("$index")
-                echo "Selected ${options[$index]}" >&2
+                echo "Selected ${options[$index]}"
             fi
         else
-            echo "Invalid option. Please try again." >&2
+            echo "Invalid option. Please try again."
         fi
     done
     
@@ -102,6 +102,7 @@ services:
       - $shared_media_dir:/data
     ports:
       - $port:8096
+      - 8920:8920 #optional
     restart: unless-stopped
     networks:
       - media_network
@@ -123,6 +124,7 @@ services:
       - $shared_media_dir:/data
     ports:
       - $port:8096
+      - 8920:8920 #optional
     restart: unless-stopped
     networks:
       - media_network
@@ -150,22 +152,74 @@ services:
       - media_network
 EOL
             ;;
-        transmission|deluge|qbittorrent)
+        transmission)
             cat > "$config_dir/docker-compose.yml" <<EOL
 version: '3'
 services:
   $name:
-    image: linuxserver/$name
+    image: linuxserver/transmission
     container_name: $name
     environment:
       - PUID=1000
       - PGID=1000
       - TZ=Europe/London
+      - TRANSMISSION_WEB_HOME=/combustion-release/ #optional
+    volumes:
+      - $config_dir:/config
+      - $shared_media_dir/downloads:/downloads
+      - $shared_media_dir/watch:/watch
+    ports:
+      - $port:9091
+      - 51413:51413
+      - 51413:51413/udp
+    restart: unless-stopped
+    networks:
+      - media_network
+EOL
+            ;;
+        deluge)
+            cat > "$config_dir/docker-compose.yml" <<EOL
+version: '3'
+services:
+  $name:
+    image: linuxserver/deluge
+    container_name: $name
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/London
+      - DELUGE_LOGLEVEL=error #optional
+    volumes:
+      - $config_dir:/config
+      - $shared_media_dir/downloads:/downloads
+    ports:
+      - $port:8112
+      - 6881:6881
+      - 6881:6881/udp
+    restart: unless-stopped
+    networks:
+      - media_network
+EOL
+            ;;
+        qbittorrent)
+            cat > "$config_dir/docker-compose.yml" <<EOL
+version: '3'
+services:
+  $name:
+    image: linuxserver/qbittorrent
+    container_name: $name
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/London
+      - WEBUI_PORT=$port
     volumes:
       - $config_dir:/config
       - $shared_media_dir/downloads:/downloads
     ports:
       - $port:$port
+      - 6881:6881
+      - 6881:6881/udp
     restart: unless-stopped
     networks:
       - media_network
@@ -203,7 +257,7 @@ services:
       - PUID=1000
       - PGID=1000
       - TZ=Europe/London
-      - AUTO_UPDATE=true
+      - AUTO_UPDATE=true #optional
     volumes:
       - $config_dir:/config
       - $shared_media_dir/downloads:/downloads
@@ -237,6 +291,47 @@ services:
       - media_network
 EOL
             ;;
+        ombi)
+            cat > "$config_dir/docker-compose.yml" <<EOL
+version: '3'
+services:
+  $name:
+    image: linuxserver/ombi
+    container_name: $name
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/London
+      - BASE_URL=/ombi #optional
+    volumes:
+      - $config_dir:/config
+    ports:
+      - $port:3579
+    restart: unless-stopped
+    networks:
+      - media_network
+EOL
+            ;;
+        overseerr)
+            cat > "$config_dir/docker-compose.yml" <<EOL
+version: '3'
+services:
+  $name:
+    image: linuxserver/overseerr
+    container_name: $name
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/London
+    volumes:
+      - $config_dir:/config
+    ports:
+      - $port:5055
+    restart: unless-stopped
+    networks:
+      - media_network
+EOL
+            ;;
         *)
             echo "Unknown application: $name"
             return 1
@@ -256,7 +351,7 @@ echo "Debug: Appdata directory: $appdata_dir"
 
 # Select media applications
 echo "Selecting media applications..."
-media_names=("plex" "emby" "jellyfin" "airsonic" "sonarr" "radarr" "lidarr" "jackett")
+media_names=("plex" "emby" "jellyfin" "airsonic" "sonarr" "radarr" "lidarr" "jackett" "ombi" "overseerr")
 selected_media=$(display_menu "Select Media Applications" "${media_names[@]}")
 
 echo "Selected media applications:"
@@ -287,7 +382,9 @@ for app in $selected_media $selected_downloaders; do
         radarr) port=7878 ;;
         lidarr) port=8686 ;;
         jackett) port=9117 ;;
-        rtorrent-rutorrent) port=8080 ;;
+        rtorrent-rutorrent) port=80 ;;
+        ombi) port=3579 ;;
+        overseerr) port=5055 ;;
         *) echo "Unknown application: $app"; continue ;;
     esac
     
