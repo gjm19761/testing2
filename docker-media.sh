@@ -1,16 +1,16 @@
 #!/bin/bash
 
+set -x  # Enable debug mode to print each command as it's executed
 set -e  # Exit immediately if a command exits with a non-zero status.
 
 echo "Debug: Script started"
 
 display_menu() {
+    echo "Debug: Entered display_menu function" >&2
     local title="$1"
     shift
     local options=("$@")
-    local selected=()
     
-    echo "Debug: Entered display_menu function" >&2
     echo "Debug: Title: $title" >&2
     echo "Debug: Number of options: ${#options[@]}" >&2
     
@@ -22,18 +22,19 @@ display_menu() {
         echo "Debug: About to list options" >&2
         for i in "${!options[@]}"; do
             echo "Debug: Processing option $i" >&2
-            echo "[ ] $((i+1)). ${options[$i]}"
+            echo "$((i+1)). ${options[$i]}"
         done
         echo "------------------------"
         echo "Enter 'done' to finish, or 'quit' to exit:"
         echo "Debug: About to read user input" >&2
-        read -r choice
+        choice=""
+        read choice
         echo "Debug: User input: $choice" >&2
         
-        if [[ "$choice" == "done" ]]; then
+        if [ "$choice" = "done" ]; then
             echo "Debug: Selection completed" >&2
             break
-        elif [[ "$choice" == "quit" ]]; then
+        elif [ "$choice" = "quit" ]; then
             echo "Debug: User chose to quit" >&2
             exit 0
         else
