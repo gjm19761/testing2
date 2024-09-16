@@ -248,6 +248,7 @@ EOL
 
 # Function to display menu and get user selection
 display_menu() {
+    echo "Debug: display_menu function started with $# arguments"
     echo "Debug: Entered display_menu function"
     local title="$1"
     shift
@@ -341,8 +342,12 @@ echo "Debug: About to display media applications menu"
 media_names=($(printf "%s\n" "${media_containers[@]}" | cut -d':' -f1))
 echo "Debug: media_names array:"
 printf '%s\n' "${media_names[@]}"
-selected_media=$(display_menu "Select Media Applications" "${media_names[@]}")
-
+echo "Debug: About to call display_menu function"
+echo "Debug: Number of media_names: ${#media_names[@]}"
+echo "Debug: Calling display_menu function directly"
+display_menu "Select Media Applications" "${media_names[@]}"
+echo "Debug: display_menu function call completed"
+selected_media=""
 echo "Debug: Selected media: $selected_media"
 
 # If no media applications were selected, inform the user and exit
