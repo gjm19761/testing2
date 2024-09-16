@@ -246,28 +246,53 @@ EOL
     echo "Docker Compose file created for $name."
 }
 
+# Function to get terminal size
+get_terminal_size() {
+    if [[ -t 0 ]]; then
+        shopt -s checkwinsize
+        (:)
+        echo "$COLUMNS $LINES"
+    else
+        echo "80 24"  # Default size if not a terminal
+    fi
+}
+
 # Function to display menu and get user selection
 display_menu() {
-    echo "Debug: display_menu function started with $# arguments"
+    echo "Debug: Entering display_menu function"
     local title="$1"
     shift
     local options=("$@")
     local selected=()
     
-    echo "Debug: Title: $title"
-    echo "Debug: Number of options: ${#options[@]}"
+    read -r COLUMNS LINES < <(get_terminal_size)
+    echo "Debug: Terminal size: $COLUMNS columns, $LINES lines"
+    
+    local max_options_per_column=$((LINES - 4))  # Leave space for title and instructions
+    local num_columns=$(( (${#options[@]} + max_options_per_column - 1) / max_options_per_column ))
+    local column_width=$((COLUMNS / num_columns))
     
     while true; do
-        echo "Debug: Entered main loop in display_menu"
+        clear
         echo "$title"
         echo "------------------------"
-        for i in "${!options[@]}"; do
+        
+        for ((i=0; i<${#options[@]}; i++)); do
+            local row=$((i % max_options_per_column))
+            local col=$((i / max_options_per_column))
+            local padding=$((col * column_width))
+            
             if [[ " ${selected[*]} " =~ " $i " ]]; then
-                echo "[X] $((i+1)). ${options[$i]}"
+                printf "\e[${row}A\e[${padding}C[X] %s. %-$((column_width-5))s" "$((i+1))" "${options[i]}"
             else
-                echo "[ ] $((i+1)). ${options[$i]}"
+                printf "\e[${row}A\e[${padding}C[ ] %s. %-$((column_width-5))s" "$((i+1))" "${options[i]}"
+            fi
+            
+            if ((row == max_options_per_column - 1 || i == ${#options[@]} - 1)); then
+                echo
             fi
         done
+        
         echo "------------------------"
         echo "Enter the number to select/deselect an option, 'done' to finish, or 'quit' to exit:"
         read -r choice
