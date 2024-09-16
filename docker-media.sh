@@ -40,17 +40,6 @@ create_directory() {
     fi
 }
 
-# Function to create a whiptail checklist from an array
-create_checklist() {
-    local arr=("$@")
-    local options=()
-    for i in "${!arr[@]}"; do
-        IFS=':' read -r name port <<< "${arr[$i]}"
-        options+=("$name" "" OFF)
-    done
-    echo "${options[@]}"
-}
-
 # Arrays of media containers and torrent downloaders
 media_containers=(
     "plex:32400" "emby:8096" "jellyfin:8920" "kodi:8080" "airsonic:4040" "beets:8337" "calibre-web:8083" 
@@ -270,9 +259,21 @@ EOL
     echo "Docker Compose file created for $name."
 }
 
+# Function to ask yes/no question
+ask_yes_no() {
+    while true; do
+        read -p "$1 (y/n): " yn
+        case $yn in
+            [Yy]* ) return 0;;
+            [Nn]* ) return 1;;
+            * ) echo "Please answer yes or yes.";;
+        esac
+    done
+}
+
 # Ask user about shared directory
-if whiptail --yesno "Do you want to use a shared directory for media?" 8 78; then
-    shared_media_dir=$(whiptail --inputbox "Enter the path for the shared media directory:" 8 78 --title "Shared Media Directory" 3>&1 1>&2 2>&3)
+if ask_yes_no "Do you want to use a shared directory for media?"; then
+    read -p "Enter the path for the shared media directory: " shared_media_dir
     create_directory "$shared_media_dir"
 else
     shared_media_dir="/media"
@@ -287,52 +288,46 @@ create_directory "$appdata_dir"
 echo "Debug: Appdata directory: $appdata_dir"
 
 # Select media applications
-media_options=($(create_checklist "${media_containers[@]}"))
-echo "Debug: Media options: ${media_options[@]}"
+selected_media=""
+for app in "${media_containers[@]}"; do
+    IFS=':' read -r name port <<< "$app"
+    if ask_yes_no "Do you want to install $name?"; then
+        selected_media="$selected_media $name"
+    fi
+done
 
-selected_media=$(whiptail --title "Select Media Applications" --checklist --separate-output \
-    "Choose media applications to install:" 20 78 10 \
-    "${media_options[@]}" \
-    3>&1 1>&2 2>&3)
-whiptail_exit_status=$?
-
-echo "Debug: Whiptail exit status: $whiptail_exit_status"
 echo "Debug: Selected media: $selected_media"
 
 # If no media applications were selected, inform the user and exit
-if [ $whiptail_exit_status -ne 0 ] || [ -z "$selected_media" ]; then
-    whiptail --msgbox "No media applications were selected. Exiting." 8 78
+if [ -z "$selected_media" ]; then
+    echo "No media applications were selected. Exiting."
     exit 0
 fi
 
 # If Plex is selected, ask for claim code
 if echo "$selected_media" | grep -q "plex"; then
-    plex_claim=$(whiptail --inputbox "Enter your Plex claim code:" 8 78 --title "Plex Claim Code" 3>&1 1>&2 2>&3)
-    plex_exit_status=$?
+    read -p "Enter your Plex claim code: " plex_claim
     echo "Debug: Plex claim code: $plex_claim"
-    echo "Debug: Plex whiptail exit status: $plex_exit_status"
-    if [ $plex_exit_status -ne 0 ]; then
-        whiptail --msgbox "Plex claim code not provided. Exiting." 8 78
+    if [ -z "$plex_claim" ]; then
+        echo "Plex claim code not provided. Exiting."
         exit 0
     fi
 fi
 
 # Select torrent downloaders
-downloader_options=($(create_checklist "${torrent_downloaders[@]}"))
-echo "Debug: Downloader options: ${downloader_options[@]}"
+selected_downloaders=""
+for app in "${torrent_downloaders[@]}"; do
+    IFS=':' read -r name port <<< "$app"
+    if ask_yes_no "Do you want to install $name?"; then
+        selected_downloaders="$selected_downloaders $name"
+    fi
+done
 
-selected_downloaders=$(whiptail --title "Select Torrent Downloaders" --checklist --separate-output \
-    "Choose torrent downloaders to install:" 20 78 10 \
-    "${downloader_options[@]}" \
-    3>&1 1>&2 2>&3)
-downloader_exit_status=$?
-
-echo "Debug: Downloader whiptail exit status: $downloader_exit_status"
 echo "Debug: Selected downloaders: $selected_downloaders"
 
 # If no torrent downloaders were selected, inform the user
-if [ $downloader_exit_status -ne 0 ] || [ -z "$selected_downloaders" ]; then
-    whiptail --msgbox "No torrent downloaders were selected." 8 78
+if [ -z "$selected_downloaders" ]; then
+    echo "No torrent downloaders were selected."
 fi
 
 # Function to get port for a given container name
@@ -354,7 +349,7 @@ create_docker_network
 
 # Create configurations for selected media applications
 echo "Creating configurations for selected media applications..."
-echo "$selected_media" | while read -r name; do
+for name in $selected_media; do
     if [ ! -z "$name" ]; then
         port=$(get_port "$name")
         create_config_and_start "$name" "$port"
@@ -363,7 +358,7 @@ done
 
 # Create configurations for selected torrent downloaders
 echo "Creating configurations for selected torrent downloaders..."
-echo "$selected_downloaders" | while read -r name; do
+for name in $selected_downloaders; do
     if [ ! -z "$name" ]; then
         port=$(get_port "$name")
         create_config_and_start "$name" "$port"
@@ -372,7 +367,7 @@ done
 
 # Start all selected applications
 echo "Starting all selected applications..."
-echo "$selected_media $selected_downloaders" | tr ' ' '\n' | while read -r name; do
+for name in $selected_media $selected_downloaders; do
     if [ ! -z "$name" ]; then
         config_dir="$appdata_dir/$name"
         if [ -f "$config_dir/docker-compose.yml" ]; then
@@ -384,4 +379,4 @@ echo "$selected_media $selected_downloaders" | tr ' ' '\n' | while read -r name;
     fi
 done
 
-whiptail --msgbox "All selected containers have been configured and started. Please check individual container logs for any issues." 8 78
+echo "All selected containers have been configured and started. Please check individual container logs for any issues."
