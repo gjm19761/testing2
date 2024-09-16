@@ -4,7 +4,35 @@ set -e  # Exit immediately if a command exits with a non-zero status.
 
 # Function to display menu and get selections
 display_menu() {
-    # ... (keep the existing display_menu function)
+    local title="$1"
+    shift
+    local options=("$@")
+    
+    echo "Debug: Entering display_menu function" >&2
+    echo "Debug: Title: $title" >&2
+    echo "Debug: Number of options: ${#options[@]}" >&2
+    echo "Debug: Options: ${options[*]}" >&2
+    
+    echo "$title" >&2
+    echo "------------------------" >&2
+    for i in "${!options[@]}"; do
+        echo "$((i+1)). ${options[$i]}" >&2
+    done
+    echo "------------------------" >&2
+    echo "Enter the numbers of your choices separated by spaces, then press Enter:" >&2
+    read -r choices
+    
+    echo "Debug: User input: $choices" >&2
+    
+    local selected=()
+    for choice in $choices; do
+        if [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le "${#options[@]}" ]; then
+            selected+=("${options[$((choice-1))]}")
+        fi
+    done
+    
+    echo "Debug: Selected options: ${selected[*]}" >&2
+    printf '%s\n' "${selected[@]}"
 }
 
 # Function to create Docker network
