@@ -1,5 +1,5 @@
 #!/bin/bash
-#by Tech Logicals
+
 # Array of scary ASCII art
 declare -a scary_ascii=(
 '
@@ -147,6 +147,14 @@ number_to_ascii() {
     echo -e "${ascii_numbers[$num]}"
 }
 
+# Function to display "/20" in ASCII art
+display_slash_20() {
+    echo " ____   ___  "
+    echo "/_  /  / _ \ "
+    echo " / /  / // / "
+    echo "/_/   \___/  "
+}
+
 # Function to create scary percentage ASCII art
 scary_percentage() {
     local percent=$1
@@ -240,6 +248,7 @@ if ((score < 10)); then
 fi
 number_to_ascii $((score / 10))
 number_to_ascii $((score % 10))
+display_slash_20
 echo
 scary_percentage $percentage
 
@@ -252,6 +261,24 @@ elif ((percentage >= 50)); then
     echo "Not bad! You have a good grasp of horror movies."
 else
     echo "Looks like you might need to watch more horror movies!"
+fi
+
+# Ask user if they want to upload their score
+read -p "Do you want to upload your score? (y/n): " upload_score
+if [[ $upload_score == "y" || $upload_score == "Y" ]]; then
+    read -p "Enter your name: " user_name
+    # URL encode the user's name
+    encoded_name=$(printf '%s' "$user_name" | jq -sRr @uri)
+    current_date=$(date +"%Y-%m-%d")
+    
+    # Upload score to a simple PHP script
+    upload_url="http://localhost/upload_score.php?name=$encoded_name&score=$score&date=$current_date"
+    if curl -s "$upload_url" | grep -q "Success"; then
+        echo "Score uploaded successfully!"
+        echo "View high scores at: http://localhost/highscores.php"
+    else
+        echo "Failed to upload score. Please try again later."
+    fi
 fi
 
 echo "Happy Halloween! Thanks for playing the 2024 Tech Logicals Halloween Quiz!"
