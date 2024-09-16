@@ -64,12 +64,22 @@ media_containers=(
 )
 
 torrent_downloaders=(
-    "transmission:9091" "deluge:8112" "qbittorrent:8080" "rtorrent:5000" "aria2:6800" "vuze:9091" 
-    "bittorrent:8080" "utorrent:8080" "tixati:8888" "webtorrent:8000"
+    "transmission:9091" "deluge:8112" "qbittorrent:8080" "rtorrent:5000" "aria2:6800"
 )
 
 # Variable to store Plex claim code
 plex_claim=""
+
+# Function to create Docker network
+create_docker_network() {
+    local network_name="media_network"
+    if ! docker network inspect $network_name >/dev/null 2>&1; then
+        echo "Creating Docker network: $network_name"
+        docker network create $network_name
+    else
+        echo "Docker network $network_name already exists"
+    fi
+}
 
 # Function to create configuration and start container
 create_config_and_start() {
@@ -78,119 +88,194 @@ create_config_and_start() {
     local config_dir="$appdata_dir/$name"
     create_directory "$config_dir"
     
-    echo "Starting $name container..."
+    echo "Creating Docker Compose file for $name..."
     case $name in
         plex)
-            if [ -z "$plex_claim" ]; then
-                plex_claim=$(whiptail --inputbox "Enter your Plex claim code:" 8 78 --title "Plex Claim Code" 3>&1 1>&2 2>&3)
-            fi
-            docker run -d \
-                --name=$name \
-                --restart=unless-stopped \
-                -p $port:32400 \
-                -e TZ="Europe/London" \
-                -e PLEX_CLAIM="$plex_claim" \
-                -v $config_dir:/config \
-                $shared_volume_arg \
-                plexinc/pms-docker
+            cat > $config_dir/docker-compose.yml <<EOL
+version: "3"
+services:
+  $name:
+    image: plexinc/pms-docker
+    container_name: $name
+    environment:
+      - TZ=Europe/London
+      - PLEX_CLAIM="$plex_claim"
+    volumes:
+      - $config_dir:/config
+      - $shared_media_dir:/media
+    ports:
+      - $port:32400
+    restart: unless-stopped
+    networks:
+      - media_network
+EOL
             ;;
         emby)
-            docker run -d \
-                --name=$name \
-                --restart=unless-stopped \
-                -p $port:8096 \
-                -e TZ="Europe/London" \
-                -v $config_dir:/config \
-                $shared_volume_arg \
-                emby/embyserver
+            cat > $config_dir/docker-compose.yml <<EOL
+version: "3"
+services:
+  $name:
+    image: emby/embyserver
+    container_name: $name
+    environment:
+      - TZ=Europe/London
+    volumes:
+      - $config_dir:/config
+      - $shared_media_dir:/media
+    ports:
+      - $port:8096
+    restart: unless-stopped
+    networks:
+      - media_network
+EOL
             ;;
         jellyfin)
-            docker run -d \
-                --name=$name \
-                --restart=unless-stopped \
-                -p $port:8096 \
-                -e TZ="Europe/London" \
-                -v $config_dir:/config \
-                $shared_volume_arg \
-                jellyfin/jellyfin
+            cat > $config_dir/docker-compose.yml <<EOL
+version: "3"
+services:
+  $name:
+    image: jellyfin/jellyfin
+    container_name: $name
+    environment:
+      - TZ=Europe/London
+    volumes:
+      - $config_dir:/config
+      - $shared_media_dir:/media
+    ports:
+      - $port:8096
+    restart: unless-stopped
+    networks:
+      - media_network
+EOL
+            ;;
+        transmission)
+            cat > $config_dir/docker-compose.yml <<EOL
+version: "3"
+services:
+  $name:
+    image: linuxserver/transmission
+    container_name: $name
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/London
+    volumes:
+      - $config_dir:/config
+      - $shared_media_dir:/media
+      - $shared_media_dir/downloads:/downloads
+    ports:
+      - $port:9091
+    restart: unless-stopped
+    networks:
+      - media_network
+EOL
+            ;;
+        deluge)
+            cat > $config_dir/docker-compose.yml <<EOL
+version: "3"
+services:
+  $name:
+    image: linuxserver/deluge
+    container_name: $name
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/London
+    volumes:
+      - $config_dir:/config
+      - $shared_media_dir:/media
+      - $shared_media_dir/downloads:/downloads
+    ports:
+      - $port:8112
+    restart: unless-stopped
+    networks:
+      - media_network
+EOL
+            ;;
+        qbittorrent)
+            cat > $config_dir/docker-compose.yml <<EOL
+version: "3"
+services:
+  $name:
+    image: linuxserver/qbittorrent
+    container_name: $name
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/London
+      - WEBUI_PORT=$port
+    volumes:
+      - $config_dir:/config
+      - $shared_media_dir:/media
+      - $shared_media_dir/downloads:/downloads
+    ports:
+      - $port:$port
+    restart: unless-stopped
+    networks:
+      - media_network
+EOL
             ;;
         rtorrent)
-            docker run -d \
-                --name=$name \
-                --restart=unless-stopped \
-                -p $port:8080 \
-                -p 49160:49160/udp \
-                -p 49161:49161 \
-                -e TZ="Europe/London" \
-                -e USR_ID=1000 \
-                -e GRP_ID=1000 \
-                -v $config_dir:/downloads \
-                diameter/rtorrent-rutorrent:latest
+            cat > $config_dir/docker-compose.yml <<EOL
+version: "3"
+services:
+  $name:
+    image: diameter/rtorrent-rutorrent
+    container_name: $name
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/London
+    volumes:
+      - $config_dir:/config
+      - $shared_media_dir:/media
+      - $shared_media_dir/downloads:/downloads
+    ports:
+      - $port:80
+      - 49160:49160/udp
+      - 49161:49161
+    restart: unless-stopped
+    networks:
+      - media_network
+EOL
             ;;
-        transmission|deluge|qbittorrent|sonarr|radarr|lidarr|prowlarr|jackett|bazarr)
-            docker run -d \
-                --name=$name \
-                --restart=unless-stopped \
-                -p $port:$port \
-                -e TZ="Europe/London" \
-                -e PUID=1000 \
-                -e PGID=1000 \
-                -v $config_dir:/config \
-                $shared_volume_arg \
-                linuxserver/$name
-            ;;
-        airsonic)
-            docker run -d \
-                --name=$name \
-                --restart=unless-stopped \
-                -p $port:4040 \
-                -e TZ="Europe/London" \
-                -v $config_dir:/airsonic/data \
-                -v $shared_media_dir:/airsonic/music \
-                airsonic/airsonic
-            ;;
-        calibre-web)
-            docker run -d \
-                --name=$name \
-                --restart=unless-stopped \
-                -p $port:8083 \
-                -e TZ="Europe/London" \
-                -v $config_dir:/config \
-                -v $shared_media_dir:/books \
-                linuxserver/calibre-web
-            ;;
-        heimdall)
-            docker run -d \
-                --name=$name \
-                --restart=unless-stopped \
-                -p $port:80 \
-                -e TZ="Europe/London" \
-                -v $config_dir:/config \
-                linuxserver/heimdall
+        aria2)
+            cat > $config_dir/docker-compose.yml <<EOL
+version: "3"
+services:
+  $name:
+    image: p3terx/aria2-pro
+    container_name: $name
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/London
+    volumes:
+      - $config_dir:/config
+      - $shared_media_dir:/media
+      - $shared_media_dir/downloads:/downloads
+    ports:
+      - $port:6800
+    restart: unless-stopped
+    networks:
+      - media_network
+EOL
             ;;
         *)
-            # For other containers, we'll use a generic approach
-            # You may need to adjust this for a specific containers
-            docker run -d \
-                --name=$name \
-                --restart=unless-stopped \
-                -p $port:$port \
-                -e TZ="Europe/London" \
-                -v $config_dir:/config \
-                $shared_volume_arg \
-                $name
+            echo "Docker Compose configuration for $name is not defined."
+            return
             ;;
     esac
-    echo "$name container started."
+    
+    echo "Docker Compose file created for $name."
 }
 
 # Ask user about shared directory
 if whiptail --yesno "Do you want to use a shared directory for media?" 8 78; then
     shared_media_dir=$(whiptail --inputbox "Enter the path for the shared media directory:" 8 78 --title "Shared Media Directory" 3>&1 1>&2 2>&3)
     create_directory "$shared_media_dir"
-    shared_volume_arg="-v $shared_media_dir:/media"
 else
-    shared_volume_arg=""
+    shared_media_dir="/media"
 fi
 
 # Create appdata directory in user's home
@@ -241,8 +326,11 @@ get_port() {
     echo $port
 }
 
-# Create configurations and start containers for selected media applications
-echo "Starting selected media applications..."
+# Create Docker network
+create_docker_network
+
+# Create configurations for selected media applications
+echo "Creating configurations for selected media applications..."
 echo "$selected_media" | while read -r name; do
     if [ ! -z "$name" ]; then
         port=$(get_port "$name")
@@ -250,12 +338,22 @@ echo "$selected_media" | while read -r name; do
     fi
 done
 
-# Create configurations and start containers for selected torrent downloaders
-echo "Starting selected torrent downloaders..."
+# Create configurations for selected torrent downloaders
+echo "Creating configurations for selected torrent downloaders..."
 echo "$selected_downloaders" | while read -r name; do
     if [ ! -z "$name" ]; then
         port=$(get_port "$name")
         create_config_and_start "$name" "$port"
+    fi
+done
+
+# Start all selected applications
+echo "Starting all selected applications..."
+for name in $selected_media $selected_downloaders; do
+    if [ ! -z "$name" ]; then
+        config_dir="$appdata_dir/$name"
+        echo "Starting $name..."
+        docker-compose -f $config_dir/docker-compose.yml up -d
     fi
 done
 
