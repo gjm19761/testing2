@@ -244,24 +244,60 @@ EOL
     echo "Docker Compose file created for $name."
 }
 
-# Function to create a whiptail checklist from an array
-create_checklist() {
-    local arr=("$@")
-    local options=()
-    for i in "${!arr[@]}"; do
-        IFS=':' read -r name port <<< "${arr[$i]}"
-        options+=("$name" "" OFF)
+# Function to display menu and get user selection
+display_menu() {
+    local title="$1"
+    shift
+    local options=("$@")
+    local selected=()
+    
+    while true; do
+        clear
+        echo "$title"
+        echo "------------------------"
+        for i in "${!options[@]}"; do
+            if [[ " ${selected[*]} " =~ " $i " ]]; then
+                echo "[X] $((i+1)). ${options[$i]}"
+            else
+                echo "[ ] $((i+1)). ${options[$i]}"
+            fi
+        done
+        echo "------------------------"
+        echo "Enter the number to select/deselect an option, 'done' to finish, or 'quit' to exit:"
+        read -r choice
+        
+        if [[ "$choice" == "done" ]]; then
+            break
+        elif [[ "$choice" == "quit" ]]; then
+            exit 0
+        elif [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le "${#options[@]}" ]; then
+            index=$((choice-1))
+            if [[ " ${selected[*]} " =~ " $index " ]]; then
+                selected=(${selected[@]/$index})
+            else
+                selected+=("$index")
+            fi
+        else
+            echo "Invalid option. Please try again."
+            sleep 1
+        fi
     done
-    echo "${options[@]}"
+    
+    for index in "${selected[@]}"; do
+        echo "${options[$index]}"
+    done
 }
 
-# Function to ask yes/no question using whiptail
+# Function to ask yes/no question
 ask_yes_no() {
-    if whiptail --yesno "$1" 8 78; then
-        return 0
-    else
-        return 1
-    fi
+    while true; do
+        read -p "$1 (y/n): " yn
+        case $yn in
+            [Yy]* ) return 0;;
+            [Nn]* ) return 1;;
+            * ) echo "Please answer yes or no.";;
+        esac
+    done
 }
 
 # Get the real user's home directory
@@ -274,7 +310,7 @@ user_home=$(eval echo ~$real_user)
 
 # Ask user about shared directory
 if ask_yes_no "Do you want to use a shared directory for media?"; then
-    shared_media_dir=$(whiptail --inputbox "Enter the path for the shared media directory:" 8 78 --title "Shared Media Directory" 3>&1 1>&2 2>&3)
+    read -p "Enter the path for the shared media directory: " shared_media_dir
     create_directory "$shared_media_dir"
 else
     shared_media_dir="$user_home/media"
@@ -289,17 +325,8 @@ create_directory "$appdata_dir"
 echo "Debug: Appdata directory: $appdata_dir"
 
 # Select media applications
-media_options=($(create_checklist "${media_containers[@]}"))
-selected_media=$(whiptail --title "Select Media Applications" --checklist \
-"Choose media applications to install:" 20 78 15 \
-"${media_options[@]}" \
-3>&1 1>&2 2>&3)
-
-# Check if user cancelled the selection
-if [ $? -ne 0 ]; then
-    echo "Media application selection cancelled. Exiting."
-    exit 1
-fi
+media_names=($(printf "%s\n" "${media_containers[@]}" | cut -d':' -f1))
+selected_media=$(display_menu "Select Media Applications" "${media_names[@]}")
 
 echo "Debug: Selected media: $selected_media"
 
@@ -311,7 +338,7 @@ fi
 
 # If Plex is selected, ask for claim code
 if echo "$selected_media" | grep -q "plex"; then
-    plex_claim=$(whiptail --inputbox "Enter your Plex claim code:" 8 78 --title "Plex Claim Code" 3>&1 1>&2 2>&3)
+    read -p "Enter your Plex claim code: " plex_claim
     echo "Debug: Plex claim code: $plex_claim"
     if [ -z "$plex_claim" ]; then
         echo "Plex claim code not provided. Exiting."
@@ -320,17 +347,8 @@ if echo "$selected_media" | grep -q "plex"; then
 fi
 
 # Select torrent downloaders
-downloader_options=($(create_checklist "${torrent_downloaders[@]}"))
-selected_downloaders=$(whiptail --title "Select Torrent Downloaders" --checklist \
-"Choose torrent downloaders to install:" 20 78 10 \
-"${downloader_options[@]}" \
-3>&1 1>&2 2>&3)
-
-# Check if user cancelled the selection
-if [ $? -ne 0 ]; then
-    echo "Torrent downloader selection cancelled. Exiting."
-    exit 1
-fi
+downloader_names=($(printf "%s\n" "${torrent_downloaders[@]}" | cut -d':' -f1))
+selected_downloaders=$(display_menu "Select Torrent Downloaders" "${downloader_names[@]}")
 
 echo "Debug: Selected downloaders: $selected_downloaders"
 
