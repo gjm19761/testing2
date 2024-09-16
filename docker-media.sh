@@ -250,6 +250,94 @@ services:
       - media_network
 EOL
             ;;
+        filebrowser)
+            cat > $config_dir/docker-compose.yml <<EOL
+version: "3"
+services:
+  $name:
+    image: filebrowser/filebrowser
+    container_name: $name
+    environment:
+      - TZ=Europe/London
+    volumes:
+      - $config_dir:/config
+      - $shared_media_dir:/srv
+    ports:
+      - $port:80
+    restart: unless-stopped
+    networks:
+      - media_network
+EOL
+            ;;
+        ombi)
+            cat > $config_dir/docker-compose.yml <<EOL
+version: "3"
+services:
+  $name:
+    image: linuxserver/ombi
+    container_name: $name
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/London
+    volumes:
+      - $config_dir:/config
+    ports:
+      - $port:3579
+    restart: unless-stopped
+    networks:
+      - media_network
+EOL
+            ;;
+        stash)
+            cat > $config_dir/docker-compose.yml <<EOL
+version: "3"
+services:
+  $name:
+    image: stashapp/stash
+    container_name: $name
+    environment:
+      - STASH_STASH=/data/
+      - STASH_GENERATED=/generated/
+      - STASH_METADATA=/metadata/
+      - STASH_CACHE=/cache/
+    volumes:
+      - $config_dir:/root/.stash
+      - $shared_media_dir:/data
+      - $config_dir/generated:/generated
+      - $config_dir/metadata:/metadata
+      - $config_dir/cache:/cache
+    ports:
+      - $port:9999
+    restart: unless-stopped
+    networks:
+      - media_network
+EOL
+            ;;
+        yourls)
+            cat > $config_dir/docker-compose.yml <<EOL
+version: "3"
+services:
+  $name:
+    image: yourls
+    container_name: $name
+    environment:
+      - YOURLS_DB_HOST=db
+      - YOURLS_DB_USER=yourls
+      - YOURLS_DB_PASS=yourlspass
+      - YOURLS_DB_NAME=yourls
+      - YOURLS_SITE=http://your-domain.com
+      - YOURLS_USER=admin
+      - YOURLS_PASS=password
+    volumes:
+      - $config_dir:/var/www/html
+    ports:
+      - $port:80
+    restart: unless-stopped
+    networks:
+      - media_network
+EOL
+            ;;
         *)
             echo "Docker Compose configuration for $name is not defined."
             return
@@ -266,7 +354,7 @@ ask_yes_no() {
         case $yn in
             [Yy]* ) return 0;;
             [Nn]* ) return 1;;
-            * ) echo "Please answer yes or yes.";;
+            * ) echo "Please answer yes or no.";;
         esac
     done
 }
@@ -379,4 +467,4 @@ for name in $selected_media $selected_downloaders; do
     fi
 done
 
-echo "All selected containers have been configured and started. Please check individual container logs for any issues."
+echo "All selected containers have been configured and started.
