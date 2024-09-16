@@ -4,12 +4,58 @@ set -e  # Exit immediately if a command exits with a non-zero status.
 
 # Function to display menu and get selections
 display_menu() {
-    # ... (keep the existing display_menu function)
+    local title="$1"
+    shift
+    local options=("$@")
+    local selected=()
+    
+    while true; do
+        echo "$title" >&2
+        echo "------------------------" >&2
+        for i in "${!options[@]}"; do
+            if [[ " ${selected[*]} " =~ " $i " ]]; then
+                echo "[X] $((i+1)). ${options[$i]}" >&2
+            else
+                echo "[ ] $((i+1)). ${options[$i]}" >&2
+            fi
+        done
+        echo "------------------------" >&2
+        echo "Enter a number to select/deselect, 'done' to finish, or 'quit' to exit:" >&2
+        read -r choice
+        
+        if [ "$choice" = "done" ]; then
+            break
+        elif [ "$choice" = "quit" ]; then
+            exit 0
+        elif [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le "${#options[@]}" ]; then
+            index=$((choice-1))
+            if [[ " ${selected[*]} " =~ " $index " ]]; then
+                selected=(${selected[@]/$index})
+                echo "Deselected ${options[$index]}" >&2
+            else
+                selected+=("$index")
+                echo "Selected ${options[$index]}" >&2
+            fi
+        else
+            echo "Invalid option. Please try again." >&2
+        fi
+    done
+    
+    # Return selected options
+    for index in "${selected[@]}"; do
+        echo "${options[$index]}"
+    done
 }
 
 # Function to create Docker network
 create_docker_network() {
-    # ... (keep the existing create_docker_network function)
+    local network_name="media_network"
+    if ! docker network inspect $network_name >/dev/null 2>&1; then
+        echo "Creating Docker network: $network_name"
+        docker network create $network_name
+    else
+        echo "Docker network $network_name already exists"
+    fi
 }
 
 # Function to create Docker Compose file
