@@ -78,12 +78,18 @@ create_config_and_start() {
     create_directory "$config_dir"
     
     echo "Creating Docker Compose file for $name..."
-    case $name in
-        plex)
-            cat > $config_dir/docker-compose.yml <<EOL
+    
+    # Start of the Docker Compose file
+    cat > $config_dir/docker-compose.yml <<EOL
 version: "3"
 services:
   $name:
+EOL
+
+    # Application-specific configuration
+    case $name in
+        plex)
+            cat >> $config_dir/docker-compose.yml <<EOL
     image: plexinc/pms-docker
     container_name: $name
     environment:
@@ -94,16 +100,10 @@ services:
       - $shared_media_dir:/media
     ports:
       - $port:32400
-    restart: unless-stopped
-    networks:
-      - media_network
 EOL
             ;;
         emby)
-            cat > $config_dir/docker-compose.yml <<EOL
-version: "3"
-services:
-  $name:
+            cat >> $config_dir/docker-compose.yml <<EOL
     image: emby/embyserver
     container_name: $name
     environment:
@@ -113,16 +113,10 @@ services:
       - $shared_media_dir:/media
     ports:
       - $port:8096
-    restart: unless-stopped
-    networks:
-      - media_network
 EOL
             ;;
         jellyfin)
-            cat > $config_dir/docker-compose.yml <<EOL
-version: "3"
-services:
-  $name:
+            cat >> $config_dir/docker-compose.yml <<EOL
     image: jellyfin/jellyfin
     container_name: $name
     environment:
@@ -132,129 +126,10 @@ services:
       - $shared_media_dir:/media
     ports:
       - $port:8096
-    restart: unless-stopped
-    networks:
-      - media_network
-EOL
-            ;;
-        transmission)
-            cat > $config_dir/docker-compose.yml <<EOL
-version: "3"
-services:
-  $name:
-    image: linuxserver/transmission
-    container_name: $name
-    environment:
-      - PUID=1000
-      - PGID=1000
-      - TZ=Europe/London
-    volumes:
-      - $config_dir:/config
-      - $shared_media_dir:/media
-      - $shared_media_dir/downloads:/downloads
-    ports:
-      - $port:9091
-    restart: unless-stopped
-    networks:
-      - media_network
-EOL
-            ;;
-        deluge)
-            cat > $config_dir/docker-compose.yml <<EOL
-version: "3"
-services:
-  $name:
-    image: linuxserver/deluge
-    container_name: $name
-    environment:
-      - PUID=1000
-      - PGID=1000
-      - TZ=Europe/London
-    volumes:
-      - $config_dir:/config
-      - $shared_media_dir:/media
-      - $shared_media_dir/downloads:/downloads
-    ports:
-      - $port:8112
-    restart: unless-stopped
-    networks:
-      - media_network
-EOL
-            ;;
-        qbittorrent)
-            cat > $config_dir/docker-compose.yml <<EOL
-version: "3"
-services:
-  $name:
-    image: linuxserver/qbittorrent
-    container_name: $name
-    environment:
-      - PUID=1000
-      - PGID=1000
-      - TZ=Europe/London
-      - WEBUI_PORT=$port
-    volumes:
-      - $config_dir:/config
-      - $shared_media_dir:/media
-      - $shared_media_dir/downloads:/downloads
-    ports:
-      - $port:$port
-    restart: unless-stopped
-    networks:
-      - media_network
-EOL
-            ;;
-        rtorrent)
-            cat > $config_dir/docker-compose.yml <<EOL
-version: "3"
-services:
-  $name:
-    image: diameter/rtorrent-rutorrent
-    container_name: $name
-    environment:
-      - PUID=1000
-      - PGID=1000
-      - TZ=Europe/London
-    volumes:
-      - $config_dir:/config
-      - $shared_media_dir:/media
-      - $shared_media_dir/downloads:/downloads
-    ports:
-      - $port:80
-      - 49160:49160/udp
-      - 49161:49161
-    restart: unless-stopped
-    networks:
-      - media_network
-EOL
-            ;;
-        aria2)
-            cat > $config_dir/docker-compose.yml <<EOL
-version: "3"
-services:
-  $name:
-    image: p3terx/aria2-pro
-    container_name: $name
-    environment:
-      - PUID=1000
-      - PGID=1000
-      - TZ=Europe/London
-    volumes:
-      - $config_dir:/config
-      - $shared_media_dir:/media
-      - $shared_media_dir/downloads:/downloads
-    ports:
-      - $port:6800
-    restart: unless-stopped
-    networks:
-      - media_network
 EOL
             ;;
         filebrowser)
-            cat > $config_dir/docker-compose.yml <<EOL
-version: "3"
-services:
-  $name:
+            cat >> $config_dir/docker-compose.yml <<EOL
     image: filebrowser/filebrowser
     container_name: $name
     environment:
@@ -264,16 +139,24 @@ services:
       - $shared_media_dir:/srv
     ports:
       - $port:80
-    restart: unless-stopped
-    networks:
-      - media_network
+EOL
+            ;;
+        freshrss)
+            cat >> $config_dir/docker-compose.yml <<EOL
+    image: linuxserver/freshrss
+    container_name: $name
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/London
+    volumes:
+      - $config_dir:/config
+    ports:
+      - $port:80
 EOL
             ;;
         ombi)
-            cat > $config_dir/docker-compose.yml <<EOL
-version: "3"
-services:
-  $name:
+            cat >> $config_dir/docker-compose.yml <<EOL
     image: linuxserver/ombi
     container_name: $name
     environment:
@@ -284,16 +167,10 @@ services:
       - $config_dir:/config
     ports:
       - $port:3579
-    restart: unless-stopped
-    networks:
-      - media_network
 EOL
             ;;
         stash)
-            cat > $config_dir/docker-compose.yml <<EOL
-version: "3"
-services:
-  $name:
+            cat >> $config_dir/docker-compose.yml <<EOL
     image: stashapp/stash
     container_name: $name
     environment:
@@ -309,16 +186,10 @@ services:
       - $config_dir/cache:/cache
     ports:
       - $port:9999
-    restart: unless-stopped
-    networks:
-      - media_network
 EOL
             ;;
         yourls)
-            cat > $config_dir/docker-compose.yml <<EOL
-version: "3"
-services:
-  $name:
+            cat >> $config_dir/docker-compose.yml <<EOL
     image: yourls
     container_name: $name
     environment:
@@ -333,9 +204,24 @@ services:
       - $config_dir:/var/www/html
     ports:
       - $port:80
-    restart: unless-stopped
-    networks:
-      - media_network
+EOL
+            ;;
+        rtorrent)
+            cat >> $config_dir/docker-compose.yml <<EOL
+    image: diameter/rtorrent-rutorrent
+    container_name: $name
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/London
+    volumes:
+      - $config_dir:/config
+      - $shared_media_dir:/media
+      - $shared_media_dir/downloads:/downloads
+    ports:
+      - $port:80
+      - 49160:49160/udp
+      - 49161:49161
 EOL
             ;;
         *)
@@ -343,46 +229,77 @@ EOL
             return
             ;;
     esac
-    
+
+    # Common configuration for all services
+    cat >> $config_dir/docker-compose.yml <<EOL
+    restart: unless-stopped
+    networks:
+      - media_network
+
+networks:
+  media_network:
+    external: true
+EOL
+
     echo "Docker Compose file created for $name."
 }
 
-# Function to ask yes/no question
-ask_yes_no() {
-    while true; do
-        read -p "$1 (y/n): " yn
-        case $yn in
-            [Yy]* ) return 0;;
-            [Nn]* ) return 1;;
-            * ) echo "Please answer yes or no.";;
-        esac
+# Function to create a whiptail checklist from an array
+create_checklist() {
+    local arr=("$@")
+    local options=()
+    for i in "${!arr[@]}"; do
+        IFS=':' read -r name port <<< "${arr[$i]}"
+        options+=("$name" "" OFF)
     done
+    echo "${options[@]}"
 }
+
+# Function to ask yes/no question using whiptail
+ask_yes_no() {
+    if whiptail --yesno "$1" 8 78; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+# Get the real user's home directory
+if [ "$SUDO_USER" ]; then
+    real_user=$SUDO_USER
+else
+    real_user=$USER
+fi
+user_home=$(eval echo ~$real_user)
 
 # Ask user about shared directory
 if ask_yes_no "Do you want to use a shared directory for media?"; then
-    read -p "Enter the path for the shared media directory: " shared_media_dir
+    shared_media_dir=$(whiptail --inputbox "Enter the path for the shared media directory:" 8 78 --title "Shared Media Directory" 3>&1 1>&2 2>&3)
     create_directory "$shared_media_dir"
 else
-    shared_media_dir="/media"
+    shared_media_dir="$user_home/media"
 fi
 
 echo "Debug: Shared media directory: $shared_media_dir"
 
 # Create appdata directory in user's home
-appdata_dir="$HOME/appdata"
+appdata_dir="$user_home/appdata"
 create_directory "$appdata_dir"
 
 echo "Debug: Appdata directory: $appdata_dir"
 
 # Select media applications
-selected_media=""
-for app in "${media_containers[@]}"; do
-    IFS=':' read -r name port <<< "$app"
-    if ask_yes_no "Do you want to install $name?"; then
-        selected_media="$selected_media $name"
-    fi
-done
+media_options=($(create_checklist "${media_containers[@]}"))
+selected_media=$(whiptail --title "Select Media Applications" --checklist \
+"Choose media applications to install:" 20 78 15 \
+"${media_options[@]}" \
+3>&1 1>&2 2>&3)
+
+# Check if user cancelled the selection
+if [ $? -ne 0 ]; then
+    echo "Media application selection cancelled. Exiting."
+    exit 1
+fi
 
 echo "Debug: Selected media: $selected_media"
 
@@ -394,7 +311,7 @@ fi
 
 # If Plex is selected, ask for claim code
 if echo "$selected_media" | grep -q "plex"; then
-    read -p "Enter your Plex claim code: " plex_claim
+    plex_claim=$(whiptail --inputbox "Enter your Plex claim code:" 8 78 --title "Plex Claim Code" 3>&1 1>&2 2>&3)
     echo "Debug: Plex claim code: $plex_claim"
     if [ -z "$plex_claim" ]; then
         echo "Plex claim code not provided. Exiting."
@@ -403,13 +320,17 @@ if echo "$selected_media" | grep -q "plex"; then
 fi
 
 # Select torrent downloaders
-selected_downloaders=""
-for app in "${torrent_downloaders[@]}"; do
-    IFS=':' read -r name port <<< "$app"
-    if ask_yes_no "Do you want to install $name?"; then
-        selected_downloaders="$selected_downloaders $name"
-    fi
-done
+downloader_options=($(create_checklist "${torrent_downloaders[@]}"))
+selected_downloaders=$(whiptail --title "Select Torrent Downloaders" --checklist \
+"Choose torrent downloaders to install:" 20 78 10 \
+"${downloader_options[@]}" \
+3>&1 1>&2 2>&3)
+
+# Check if user cancelled the selection
+if [ $? -ne 0 ]; then
+    echo "Torrent downloader selection cancelled. Exiting."
+    exit 1
+fi
 
 echo "Debug: Selected downloaders: $selected_downloaders"
 
@@ -467,4 +388,4 @@ for name in $selected_media $selected_downloaders; do
     fi
 done
 
-echo "All selected containers have been configured and started.
+echo "All selected containers have been configured and started. Please check individual container logs for any issues."
