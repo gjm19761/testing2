@@ -131,7 +131,7 @@ declare -a questions=(
 
 # Function to convert number to ASCII art
 number_to_ascii() {
-    local -n num=$1
+    local num=$1
     local -a ascii_numbers=(
         ' ___  \n/ _ \ \n\/ \/ \n\___/ ' # 0
         '  _   \n / |  \n | |  \n |_|  ' # 1
@@ -235,6 +235,9 @@ clear
 percentage=$((score * 100 / 20))
 echo "Quiz completed!"
 echo "Your score:"
+if ((score < 10)); then
+    number_to_ascii 0
+fi
 number_to_ascii $((score / 10))
 number_to_ascii $((score % 10))
 echo
