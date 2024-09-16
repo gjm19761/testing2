@@ -323,10 +323,10 @@ if [[ $upload_score == "y" || $upload_score == "Y" ]]; then
     current_date=$(date +"%Y-%m-%d")
     
     # Upload score to a simple PHP script
-    upload_url="http://localhost/upload_score.php?name=$encoded_name&score=$score&date=$current_date"
+    upload_url="http://halloween2024.techlogicals.uk/upload_score.php?name=$encoded_name&score=$score&date=$current_date"
     if curl -s "$upload_url" | grep -q "Success"; then
         echo "Score uploaded successfully!"
-        echo "View high scores at: http://localhost/highscores.php"
+        echo "View high scores at: http://halloween2024.techlogicals.uk/highscores.php"
     else
         echo "Failed to upload score. Please try again later."
     fi
