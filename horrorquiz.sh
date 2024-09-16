@@ -1,12 +1,52 @@
 #!/bin/bash
-#by tech logicals
+
+# Function to install jq
+install_jq() {
+    echo "jq is required for this script to run. Attempting to install jq..."
+    if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+        if command -v apt-get &> /dev/null; then
+            sudo apt-get update && sudo apt-get install -y jq
+        elif command -v yum &> /dev/null; then
+            sudo yum install -y jq
+        else
+            echo "Unable to install jq automatically. Please install it manually."
+            exit 1
+        fi
+    elif [[ "$OSTYPE" == "darwin"* ]]; then
+        if command -v brew &> /dev/null; then
+            brew install jq
+        else
+            echo "Homebrew is not installed. Please install Homebrew and then run: brew install jq"
+            exit 1
+        fi
+    else
+        echo "Unsupported operating system. Please install jq manually."
+        exit 1
+    fi
+}
+
 # Check if jq is installed
 if ! command -v jq &> /dev/null; then
-    echo "jq is not installed. Please install it to run this script."
-    echo "On Ubuntu or Debian, you can install it with: sudo apt-get install jq"
-    echo "On macOS with Homebrew, use: brew install jq"
+    echo "jq is not installed."
+    read -p "Do you want to attempt to install jq? (y/n): " install_choice
+    if [[ $install_choice == "y" || $install_choice == "Y" ]]; then
+        install_jq
+    else
+        echo "jq is required for this script. Please install it manually."
+        echo "On Ubuntu or Debian, you can install it with: sudo apt-get install jq"
+        echo "On macOS with Homebrew, use: brew install jq"
+        echo "For other systems, visit: https://stedolan.github.io/jq/download/"
+        exit 1
+    fi
+fi
+
+# Check again if jq is installed (in case installation failed)
+if ! command -v jq &> /dev/null; then
+    echo "jq installation failed or was not completed. Please install jq manually and run the script again."
     exit 1
 fi
+
+echo "jq is installed. Continuing with the quiz..."
 
 # Array of scary ASCII art
 declare -a scary_ascii=(
