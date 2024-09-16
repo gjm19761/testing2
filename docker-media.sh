@@ -256,7 +256,11 @@ get_terminal_size() {
         echo "80 24"  # Default size if not a terminal
     fi
 }
-
+echo "Debug: About to call display_menu function"
+echo "Debug: Title argument: Select Media Applications"
+echo "Debug: Number of options: ${#media_names[@]}"
+echo "Debug: First few options:"
+printf '  %s\n' "${media_names[@]:0:5}"
 # Function to display menu and get user selection
 display_menu() {
     echo "Debug: Entering display_menu function"
