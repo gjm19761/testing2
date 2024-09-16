@@ -8,22 +8,13 @@ display_menu() {
     local title="$1"
     shift
     local options=("$@")
-    local selected=()
     
     echo "Debug: Title: $title"
     echo "Debug: Number of options: ${#options[@]}"
-    
-    echo "$title"
-    echo "------------------------"
-    for i in "${!options[@]}"; do
-        echo "[ ] $((i+1)). ${options[$i]}"
+    echo "Debug: Options:"
+    for opt in "${options[@]}"; do
+        echo "  - $opt"
     done
-    echo "------------------------"
-    echo "Enter 'done' to finish, or 'quit' to exit:"
-    
-    local choice
-    read -r choice
-    echo "Debug: User input: $choice"
     
     # For debugging, just return the first option
     echo "${options[0]}"
@@ -44,6 +35,7 @@ media_names=("plex" "emby" "jellyfin" "kodi" "airsonic")
 echo "Debug: media_names array created with ${#media_names[@]} elements"
 
 echo "Debug: About to call display_menu function"
+echo "Debug: Command: display_menu \"Select Media Applications\" \"\${media_names[@]}\""
 selected_media=$(display_menu "Select Media Applications" "${media_names[@]}")
 
 echo "Debug: After display_menu call"
