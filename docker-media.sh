@@ -4,16 +4,16 @@ set -e  # Exit immediately if a command exits with a non-zero status.
 
 # Function to display menu and get selections
 display_menu() {
-    echo "Debug: Entered display_menu function"
+    echo "Debug: Entered display_menu function" >&2
     local title="$1"
     shift
     local options=("$@")
     
-    echo "Debug: Title: $title"
-    echo "Debug: Number of options: ${#options[@]}"
-    echo "Debug: Options:"
+    echo "Debug: Title: $title" >&2
+    echo "Debug: Number of options: ${#options[@]}" >&2
+    echo "Debug: Options:" >&2
     for opt in "${options[@]}"; do
-        echo "  - $opt"
+        echo "  - $opt" >&2
     done
     
     # For debugging, just return the first option
@@ -35,7 +35,6 @@ media_names=("plex" "emby" "jellyfin" "kodi" "airsonic")
 echo "Debug: media_names array created with ${#media_names[@]} elements"
 
 echo "Debug: About to call display_menu function"
-echo "Debug: Command: display_menu \"Select Media Applications\" \"\${media_names[@]}\""
 selected_media=$(display_menu "Select Media Applications" "${media_names[@]}")
 
 echo "Debug: After display_menu call"
