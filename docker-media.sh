@@ -23,8 +23,10 @@ display_menu() {
         read -r choice
         
         if [ "$choice" = "done" ]; then
+            echo "Debug: Selection completed. Number of selections: ${#selected[@]}" >&2
             break
         elif [ "$choice" = "quit" ]; then
+            echo "Exiting script." >&2
             exit 0
         elif [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le "${#options[@]}" ]; then
             index=$((choice-1))
@@ -40,10 +42,15 @@ display_menu() {
         fi
     done
     
-    # Return selected options
-    for index in "${selected[@]}"; do
-        echo "${options[$index]}"
-    done
+    echo "Debug: Final selections:" >&2
+    if [ ${#selected[@]} -eq 0 ]; then
+        echo "No items were selected." >&2
+    else
+        for index in "${selected[@]}"; do
+            echo "${options[$index]}" >&2
+            echo "${options[$index]}"
+        done
+    fi
 }
 
 echo "Debug: Before media_names array"
@@ -59,6 +66,11 @@ echo "Debug: About to call display_menu function"
 selected_media=$(display_menu "Select Media Applications" "${media_names[@]}")
 
 echo "Debug: After display_menu call"
-echo "Debug: Selected media: $selected_media"
+if [ -z "$selected_media" ]; then
+    echo "Debug: No media applications were selected."
+else
+    echo "Debug: Selected media:"
+    echo "$selected_media"
+fi
 
 echo "Debug: Script ended"
