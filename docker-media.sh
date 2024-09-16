@@ -278,19 +278,29 @@ else
     shared_media_dir="/media"
 fi
 
+echo "Debug: Shared media directory: $shared_media_dir"
+
 # Create appdata directory in user's home
 appdata_dir="$HOME/appdata"
 create_directory "$appdata_dir"
 
+echo "Debug: Appdata directory: $appdata_dir"
+
 # Select media applications
 media_options=($(create_checklist "${media_containers[@]}"))
-selected_media=$(whiptail --checklist --separate-output \
-    "Select media applications:" 20 78 10 \
+echo "Debug: Media options: ${media_options[@]}"
+
+selected_media=$(whiptail --title "Select Media Applications" --checklist --separate-output \
+    "Choose media applications to install:" 20 78 10 \
     "${media_options[@]}" \
     3>&1 1>&2 2>&3)
+whiptail_exit_status=$?
+
+echo "Debug: Whiptail exit status: $whiptail_exit_status"
+echo "Debug: Selected media: $selected_media"
 
 # If no media applications were selected, inform the user and exit
-if [ $? -ne 0 ] || [ -z "$selected_media" ]; then
+if [ $whiptail_exit_status -ne 0 ] || [ -z "$selected_media" ]; then
     whiptail --msgbox "No media applications were selected. Exiting." 8 78
     exit 0
 fi
@@ -298,7 +308,10 @@ fi
 # If Plex is selected, ask for claim code
 if echo "$selected_media" | grep -q "plex"; then
     plex_claim=$(whiptail --inputbox "Enter your Plex claim code:" 8 78 --title "Plex Claim Code" 3>&1 1>&2 2>&3)
-    if [ $? -ne 0 ]; then
+    plex_exit_status=$?
+    echo "Debug: Plex claim code: $plex_claim"
+    echo "Debug: Plex whiptail exit status: $plex_exit_status"
+    if [ $plex_exit_status -ne 0 ]; then
         whiptail --msgbox "Plex claim code not provided. Exiting." 8 78
         exit 0
     fi
@@ -306,13 +319,19 @@ fi
 
 # Select torrent downloaders
 downloader_options=($(create_checklist "${torrent_downloaders[@]}"))
-selected_downloaders=$(whiptail --checklist --separate-output \
-    "Select torrent downloaders:" 20 78 10 \
+echo "Debug: Downloader options: ${downloader_options[@]}"
+
+selected_downloaders=$(whiptail --title "Select Torrent Downloaders" --checklist --separate-output \
+    "Choose torrent downloaders to install:" 20 78 10 \
     "${downloader_options[@]}" \
     3>&1 1>&2 2>&3)
+downloader_exit_status=$?
+
+echo "Debug: Downloader whiptail exit status: $downloader_exit_status"
+echo "Debug: Selected downloaders: $selected_downloaders"
 
 # If no torrent downloaders were selected, inform the user
-if [ $? -ne 0 ] || [ -z "$selected_downloaders" ]; then
+if [ $downloader_exit_status -ne 0 ] || [ -z "$selected_downloaders" ]; then
     whiptail --msgbox "No torrent downloaders were selected." 8 78
 fi
 
