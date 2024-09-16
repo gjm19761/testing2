@@ -170,7 +170,7 @@ create_config_and_start() {
             ;;
         *)
             # For other containers, we'll use a generic approach
-            # You may need to adjust this for specific containers
+            # You may need to adjust this for a specific containers
             docker run -d \
                 --name=$name \
                 --restart=unless-stopped \
