@@ -131,20 +131,18 @@ declare -a questions=(
 
 # Function to shuffle an array
 shuffle_array() {
-    local i tmp size max
-    size=${#@}
-    max=$(( 32768 / size * size ))
-    for ((i=size-1; i>0; i--)); do
-        while (( (j=$(( RANDOM % max ))) >= size )); do :; done
-        (( j = j % i ))
-        tmp=${!i}
-        eval "${!i}=\${!j}"
-        eval "${!j}=\$tmp"
+    local -n arr=$1
+    local i j temp
+    for ((i = ${#arr[@]} - 1; i > 0; i--)); do
+        j=$((RANDOM % (i + 1)))
+        temp="${arr[i]}"
+        arr[i]="${arr[j]}"
+        arr[j]="$temp"
     done
 }
 
 # Shuffle and select 20 questions
-shuffle_array "${questions[@]}"
+shuffle_array questions
 selected_questions=("${questions[@]:0:20}")
 
 # Initialize score
@@ -167,7 +165,7 @@ for ((i = 0; i < 20; i++)); do
     
     # Create an array of all answers
     answers=("$correct_answer" "$wrong1" "$wrong2" "$wrong3")
-    shuffle_array "${answers[@]}"
+    shuffle_array answers
 
     # Display question and answers
     echo "Question $((i+1))/20: $question"
