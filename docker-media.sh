@@ -5,16 +5,55 @@ set -e  # Exit immediately if a command exits with a non-zero status.
 echo "Debug: Script started"
 
 display_menu() {
-    echo "Debug: Entered display_menu function" >&2
-    echo "Debug: Number of arguments: $#" >&2
-    echo "Debug: Title: $1" >&2
+    local title="$1"
     shift
-    echo "Debug: Number of options: $#" >&2
-    echo "Debug: First few options:" >&2
-    printf '  %s\n' "${@:1:5}" >&2
+    local options=("$@")
+    local selected=()
     
-    # For testing, just return the first option
-    echo "$1"
+    echo "Debug: Entered display_menu function" >&2
+    echo "Debug: Title: $title" >&2
+    echo "Debug: Number of options: ${#options[@]}" >&2
+    
+    while true; do
+        echo "$title"
+        echo "------------------------"
+        for i in "${!options[@]}"; do
+            if [[ " ${selected[*]} " =~ " $i " ]]; then
+                echo "[X] $((i+1)). ${options[$i]}"
+            else
+                echo "[ ] $((i+1)). ${options[$i]}"
+            fi
+        done
+        echo "------------------------"
+        echo "Enter the number to select/deselect an option, 'done' to finish, or 'quit' to exit:"
+        read -r choice
+        echo "Debug: User input: $choice" >&2
+        
+        if [[ "$choice" == "done" ]]; then
+            echo "Debug: Selection completed" >&2
+            break
+        elif [[ "$choice" == "quit" ]]; then
+            echo "Debug: User chose to quit" >&2
+            exit 0
+        elif [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le "${#options[@]}" ]; then
+            index=$((choice-1))
+            if [[ " ${selected[*]} " =~ " $index " ]]; then
+                selected=(${selected[@]/$index})
+                echo "Debug: Deselected option $choice" >&2
+            else
+                selected+=("$index")
+                echo "Debug: Selected option $choice" >&2
+            fi
+        else
+            echo "Invalid option. Please try again."
+            sleep 1
+        fi
+    done
+    
+    # Return selected options
+    for index in "${selected[@]}"; do
+        echo "${options[$index]}"
+    done
 }
 
 echo "Debug: Before media_names array"
@@ -28,11 +67,6 @@ echo "Debug: After media_names array"
 echo "Debug: Number of media_names: ${#media_names[@]}"
 
 echo "Debug: About to call display_menu function"
-echo "Debug: Title argument: Select Media Applications"
-echo "Debug: Number of options: ${#media_names[@]}"
-echo "Debug: First few options:"
-printf '  %s\n' "${media_names[@]:0:5}"
-
 selected_media=$(display_menu "Select Media Applications" "${media_names[@]}")
 
 echo "Debug: After display_menu call"
