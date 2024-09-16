@@ -28,7 +28,7 @@ display_timer() {
 
     # Calculate start position
     local start_row=$(( (term_height - 7) / 2 ))
-    local start_col=$(( (term_width - 41) / 2 ))  # 41 = 4 digits * 9 width + 5 spaces
+    local start_col=$(( (term_width - 43) / 2 ))  # 43 = 4 digits * 9 width + 7 spaces (including colon)
 
     # Display timer
     for i in {0..6}; do
@@ -37,14 +37,14 @@ display_timer() {
         m2=$(display_digit $((minutes%10)) | sed -n "$((i+1))p")
         s1=$(display_digit $((seconds/10)) | sed -n "$((i+1))p")
         s2=$(display_digit $((seconds%10)) | sed -n "$((i+1))p")
-        echo -n "$m1 $m2  $s1 $s2"
+        colon=""
+        if [ $i -eq 2 ] || [ $i -eq 4 ]; then
+            colon="███"
+        else
+            colon="   "
+        fi
+        echo -n "$m1 $m2 $colon $s1 $s2"
     done
-
-    # Display colon
-    tput cup $((start_row + 2)) $((start_col + 19))
-    echo "██"
-    tput cup $((start_row + 4)) $((start_col + 19))
-    echo "██"
 
     # Move cursor to bottom of screen
     tput cup $((term_height-1)) 0
