@@ -50,6 +50,31 @@ display_timer() {
     tput cup $((term_height-1)) 0
 }
 
+# Function to display "Time's up!" in big letters
+display_times_up() {
+    local term_width=$(tput cols)
+    local term_height=$(tput lines)
+    local start_row=$(( (term_height - 6) / 2 ))
+    local start_col=$(( (term_width - 62) / 2 ))
+
+    clear
+    tput cup $start_row $start_col
+    echo "████████╗██╗███╗   ███╗███████╗███████╗    ██╗   ██╗██████╗ ██╗"
+    tput cup $((start_row+1)) $start_col
+    echo "╚══██╔══╝██║████╗ ████║██╔════╝██╔════╝    ██║   ██║██╔══██╗██║"
+    tput cup $((start_row+2)) $start_col
+    echo "   ██║   ██║██╔████╔██║█████╗  ███████╗    ██║   ██║██████╔╝██║"
+    tput cup $((start_row+3)) $start_col
+    echo "   ██║   ██║██║╚██╔╝██║██╔══╝  ╚════██║    ██║   ██║██╔═══╝ ╚═╝"
+    tput cup $((start_row+4)) $start_col
+    echo "   ██║   ██║██║ ╚═╝ ██║███████╗███████║    ╚██████╔╝██║     ██╗"
+    tput cup $((start_row+5)) $start_col
+    echo "   ╚═╝   ╚═╝╚═╝     ╚═╝╚══════╝╚══════╝     ╚═════╝ ╚═╝     ╚═╝"
+
+    # Move cursor to bottom of screen
+    tput cup $((term_height-1)) 0
+}
+
 # Main script
 echo "Enter the timer duration in seconds:"
 read duration
@@ -66,4 +91,5 @@ while [ $total_seconds -ge 0 ]; do
     ((total_seconds--))
 done
 
-echo "Time's up!"
+display_times_up
+sleep 5  # Display "Time's up!" for 5 seconds
