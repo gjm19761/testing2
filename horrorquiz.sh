@@ -1,5 +1,5 @@
 #!/bin/bash
-
+#by Tech Logicals
 # Array of scary ASCII art
 declare -a scary_ascii=(
 '
@@ -129,6 +129,39 @@ declare -a questions=(
     "In 'Paranormal Activity', what is the name of the demon haunting Katie?|Toby|Pazuzu|Asmodeus|Zozo"
 )
 
+# Function to convert number to ASCII art
+number_to_ascii() {
+    local -n num=$1
+    local -a ascii_numbers=(
+        ' ___  \n/ _ \ \n\/ \/ \n\___/ ' # 0
+        '  _   \n / |  \n | |  \n |_|  ' # 1
+        ' ___  \n|_  ) \n / /  \n/___| ' # 2
+        ' ___  \n|__ \ \n|__) |\n\___/ ' # 3
+        ' _ _  \n| | | \n|_  _|\n  |_| ' # 4
+        ' ___  \n| __| \n|__ \ \n|___/ ' # 5
+        '  __  \n / /  \n/ _ \ \n\___/ ' # 6
+        ' ____ \n|__  |\n  / / \n /_/  ' # 7
+        ' ___  \n( _ ) \n/ _ \ \n\___/ ' # 8
+        ' ___  \n/ _ \ \n\_, / \n /_/  ' # 9
+    )
+    echo -e "${ascii_numbers[$num]}"
+}
+
+# Function to create scary percentage ASCII art
+scary_percentage() {
+    local percent=$1
+    echo "   _____   "
+    echo "  /     \  "
+    echo " | () () | "
+    echo "  \  ^  /  "
+    echo "   |||||   "
+    echo "   |||||   "
+    echo "  -------  "
+    printf " /       \\ \n"
+    printf "|   %3d%%  |\n" "$percent"
+    printf " \\_______/ \n"
+}
+
 # Function to shuffle an array
 shuffle_array() {
     local -n arr=$1
@@ -201,8 +234,11 @@ done
 clear
 percentage=$((score * 100 / 20))
 echo "Quiz completed!"
-echo "Your score: $score out of 20"
-echo "Percentage: $percentage%"
+echo "Your score:"
+number_to_ascii $((score / 10))
+number_to_ascii $((score % 10))
+echo
+scary_percentage $percentage
 
 # Provide feedback based on the score
 if ((percentage >= 90)); then
@@ -215,4 +251,4 @@ else
     echo "Looks like you might need to watch more horror movies!"
 fi
 
-echo "Happy Halloween! Thanks for playing!"
+echo "Happy Halloween! Thanks for playing the 2024 Tech Logicals Halloween Quiz!"
