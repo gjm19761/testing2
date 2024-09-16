@@ -4,12 +4,46 @@ set -e  # Exit immediately if a command exits with a non-zero status.
 
 # Function to display menu and get selections
 display_menu() {
-    # ... (keep existing function as is) ...
+    local title="$1"
+    shift
+    local options=("$@")
+    
+    echo "Debug: Entering display_menu function" >&2
+    echo "Debug: Title: $title" >&2
+    echo "Debug: Number of options: ${#options[@]}" >&2
+    echo "Debug: Options: ${options[*]}" >&2
+    
+    echo "$title" >&2
+    echo "------------------------" >&2
+    for i in "${!options[@]}"; do
+        echo "$((i+1)). ${options[$i]}" >&2
+    done
+    echo "------------------------" >&2
+    echo "Enter the numbers of your choices separated by spaces, then press Enter:" >&2
+    read -r choices
+    
+    echo "Debug: User input: $choices" >&2
+    
+    local selected=()
+    for choice in $choices; do
+        if [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le "${#options[@]}" ]; then
+            selected+=("${options[$((choice-1))]}")
+        fi
+    done
+    
+    echo "Debug: Selected options: ${selected[*]}" >&2
+    printf '%s\n' "${selected[@]}"
 }
 
 # Function to create Docker network
 create_docker_network() {
-    # ... (keep existing function as is) ...
+    local network_name="media_network"
+    if ! docker network inspect $network_name >/dev/null 2>&1; then
+        echo "Creating Docker network: $network_name"
+        docker network create $network_name
+    else
+        echo "Docker network $network_name already exists"
+    fi
 }
 
 # Function to check if a port is in use
