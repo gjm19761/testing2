@@ -290,7 +290,7 @@ selected_media=$(whiptail --checklist --separate-output \
     3>&1 1>&2 2>&3)
 
 # If no media applications were selected, inform the user and exit
-if [ -z "$selected_media" ]; then
+if [ $? -ne 0 ] || [ -z "$selected_media" ]; then
     whiptail --msgbox "No media applications were selected. Exiting." 8 78
     exit 0
 fi
@@ -298,6 +298,10 @@ fi
 # If Plex is selected, ask for claim code
 if echo "$selected_media" | grep -q "plex"; then
     plex_claim=$(whiptail --inputbox "Enter your Plex claim code:" 8 78 --title "Plex Claim Code" 3>&1 1>&2 2>&3)
+    if [ $? -ne 0 ]; then
+        whiptail --msgbox "Plex claim code not provided. Exiting." 8 78
+        exit 0
+    fi
 fi
 
 # Select torrent downloaders
@@ -308,7 +312,7 @@ selected_downloaders=$(whiptail --checklist --separate-output \
     3>&1 1>&2 2>&3)
 
 # If no torrent downloaders were selected, inform the user
-if [ -z "$selected_downloaders" ]; then
+if [ $? -ne 0 ] || [ -z "$selected_downloaders" ]; then
     whiptail --msgbox "No torrent downloaders were selected." 8 78
 fi
 
@@ -349,11 +353,15 @@ done
 
 # Start all selected applications
 echo "Starting all selected applications..."
-for name in $selected_media $selected_downloaders; do
+echo "$selected_media $selected_downloaders" | tr ' ' '\n' | while read -r name; do
     if [ ! -z "$name" ]; then
         config_dir="$appdata_dir/$name"
-        echo "Starting $name..."
-        docker-compose -f $config_dir/docker-compose.yml up -d
+        if [ -f "$config_dir/docker-compose.yml" ]; then
+            echo "Starting $name..."
+            docker-compose -f "$config_dir/docker-compose.yml" up -d
+        else
+            echo "Docker Compose file for $name not found. Skipping..."
+        fi
     fi
 done
 
