@@ -1,4 +1,3 @@
-
 #!/bin/bash
 
 set -e  # Exit immediately if a command exits with a non-zero status.
@@ -6,13 +5,13 @@ set -e  # Exit immediately if a command exits with a non-zero status.
 echo "Debug: Script started"
 
 display_menu() {
-    echo "Debug: Entered display_menu function"
-    echo "Debug: Number of arguments: $#"
-    echo "Debug: Title: $1"
+    echo "Debug: Entered display_menu function" >&2
+    echo "Debug: Number of arguments: $#" >&2
+    echo "Debug: Title: $1" >&2
     shift
-    echo "Debug: Number of options: $#"
-    echo "Debug: First few options:"
-    printf '  %s\n' "${@:1:5}"
+    echo "Debug: Number of options: $#" >&2
+    echo "Debug: First few options:" >&2
+    printf '  %s\n' "${@:1:5}" >&2
     
     # For testing, just return the first option
     echo "$1"
